@@ -139,7 +139,8 @@ public class DEALRoundKeys : IGetRoundKeys
 public class DEALRoundTransmittion : IRoundTransmition
 {
     public byte RoundsAmount { get; set; }
-    private ECBCipheringMode? eccCM;
+    //private ECBCipheringMode? eccCM;
+    //private Mutex mutex;
 
     public DEALRoundTransmittion(byte[] key)
     {
@@ -169,7 +170,7 @@ public class DEALRoundTransmittion : IRoundTransmition
 
     public byte[] roundTransmition(in byte[] bytes, in byte[] roundKey)
     {
-        eccCM = new ECBCipheringMode(new DES(roundKey), new ZeroesPaddingMode());
+        var eccCM = new ECBCipheringMode(new DES(roundKey), new ZeroesPaddingMode());
         byte[] left = new byte[8];
         byte[] right = new byte[8];
 
@@ -183,13 +184,12 @@ public class DEALRoundTransmittion : IRoundTransmition
         {
             newRight[i] = (byte)(left[i] ^ feistelResult[i]);
         }
-
         return right.Concat(newRight).ToArray();
     }
 
     public byte[] roundTransmitionRev(in byte[] bytes, in byte[] roundKey)
     {
-        eccCM = new ECBCipheringMode(new DES(roundKey), new ZeroesPaddingMode());
+        var eccCM = new ECBCipheringMode(new DES(roundKey), new ZeroesPaddingMode());
         byte[] left = new byte[8];
         byte[] right = new byte[8];
 
@@ -203,7 +203,6 @@ public class DEALRoundTransmittion : IRoundTransmition
         {
             originalRight[i] = (byte)(right[i] ^ feistelResult[i]);
         }
-
         return originalRight.Concat(left).ToArray();
     }
 }

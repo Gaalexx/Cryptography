@@ -29,9 +29,9 @@ namespace Program
             byte[] key192 = key128.Concat(BitConverter.GetBytes(21312312321312)).ToArray();
             byte[] key256 = key192.Concat(BitConverter.GetBytes(98798737456)).ToArray();
 
-            DEAL deal = new DEAL(key128);
+            DEAL deal = new DEAL(key256);
 
-            Ciphering ciphering = new Ciphering(deal, CipheringMode.RandomDelta, PaddingMode.Zeros);
+            Ciphering ciphering = new Ciphering(deal, CipheringMode.ECB, PaddingMode.Zeros);
             ciphering.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test");
             ciphering.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/testCip");
             ciphering.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test.png");
@@ -40,7 +40,7 @@ namespace Program
 
         static void Main(String[] args)
         {
-            testDealVariations();
+            testDesVariations();
         }
     }
 }

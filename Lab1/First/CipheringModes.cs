@@ -74,7 +74,7 @@ class ECBCipheringMode : ICipheringMode
                 Array.Copy(decryptedBlock, 0, result, i, blockSize);
             }
         );
-        
+
         if (isFinalBlock)
         {
             return paddingMode.unpackMissingBytes(result);
@@ -160,7 +160,7 @@ class PCBCCipheringMode : ICipheringMode
             Array.Copy(xoring, 0, result, i, blockSize);
             for (int j = 0; j < blockSize; j++)
             {
-                IVCopy[j] = (byte)(blockToDecipher[j] ^ decipheredData[j]);
+                IVCopy[j] = (byte)(blockToDecipher[j] ^ xoring[j]);
             }
         }
         if (isFinalBlock)
@@ -594,7 +594,14 @@ class RandomDeltaCipheringMode : ICipheringMode
 
         for (int i = 0; i < result.Length; i += blockSize)
         {
-            byte[] deltaBlock = BitConverter.GetBytes(delta);
+            byte[] deltaBlock = BitConverter.GetBytes((ulong)delta);
+            if (deltaBlock.Length < blockSize)
+            {
+                byte[] zeroes = new byte[blockSize - deltaBlock.Length];
+                Array.Fill<byte>(zeroes, 0);
+                deltaBlock = zeroes.Concat(deltaBlock).ToArray();
+            }
+
             byte[] processedDelta = cipheringAlgorithm.cipherBlock(in deltaBlock);
 
             int currentBlockSize = Math.Min(blockSize, result.Length - i);
