@@ -10,8 +10,8 @@ namespace MyCiphering
     #region interfaces
     public interface ICipheringMode
     {
-        public byte[] cipher(in byte[] dataToCipher, in byte[] key, in byte[] IV);
-        public byte[] decipher(in byte[] dataToDecipher, in byte[] key, in byte[] IV);
+        public byte[] cipher(in byte[] dataToCipher, in byte[] IV);
+        public byte[] decipher(in byte[] dataToDecipher, in byte[] IV);
     }
 
     public interface IPaddingMode
@@ -35,8 +35,8 @@ namespace MyCiphering
     public interface ICipheringAlgorithm
     {
         public byte BlockSize { get; }
-        public byte[] cipherBlock(in byte[] blockToCipher, in byte[] key);
-        public byte[] decipherBlock(in byte[] blockToDecipher, in byte[] key);
+        public byte[] cipherBlock(in byte[] blockToCipher);
+        public byte[] decipherBlock(in byte[] blockToDecipher);
     }
 
     public interface IBlockCiphering
@@ -50,18 +50,15 @@ namespace MyCiphering
         private ICipheringAlgorithm cipheringAlgorithm;
         private IPaddingMode paddingMode;
         private ICipheringMode cipheringMode;
-        private byte[] key;
         private byte[] initializeVector;
 
-        public Ciphering(
-            byte[] key,
+        public Ciphering( //TODO: занести PaddingMode обратно в CipheringMode
             ICipheringAlgorithm cipheringAlgorithm,
             CipheringMode cipheringMode,
             PaddingMode paddingMode,
             byte[]? initializeVector = null
         )
         {
-            this.key = (byte[])key.Clone();
             this.cipheringAlgorithm = cipheringAlgorithm;
             if (initializeVector == null)
             {
@@ -93,25 +90,46 @@ namespace MyCiphering
             switch (cipheringMode)
             {
                 case CipheringMode.ECB:
-                    this.cipheringMode = new ECBCipheringMode(this.cipheringAlgorithm);
+                    this.cipheringMode = new ECBCipheringMode(
+                        this.cipheringAlgorithm,
+                        this.paddingMode
+                    );
                     break;
                 case CipheringMode.CBC:
-                    this.cipheringMode = new CBCCipheringMode(this.cipheringAlgorithm);
+                    this.cipheringMode = new CBCCipheringMode(
+                        this.cipheringAlgorithm,
+                        this.paddingMode
+                    );
                     break;
                 case CipheringMode.PCBC:
-                    this.cipheringMode = new PCBCCipheringMode(this.cipheringAlgorithm);
+                    this.cipheringMode = new PCBCCipheringMode(
+                        this.cipheringAlgorithm,
+                        this.paddingMode
+                    );
                     break;
                 case CipheringMode.CFB:
-                    this.cipheringMode = new CFBCipheringMode(this.cipheringAlgorithm);
+                    this.cipheringMode = new CFBCipheringMode(
+                        this.cipheringAlgorithm,
+                        this.paddingMode
+                    );
                     break;
                 case CipheringMode.OFB:
-                    this.cipheringMode = new OFBCipheringMode(this.cipheringAlgorithm);
+                    this.cipheringMode = new OFBCipheringMode(
+                        this.cipheringAlgorithm,
+                        this.paddingMode
+                    );
                     break;
                 case CipheringMode.CTR:
-                    this.cipheringMode = new CTRCipheringMode(this.cipheringAlgorithm);
+                    this.cipheringMode = new CTRCipheringMode(
+                        this.cipheringAlgorithm,
+                        this.paddingMode
+                    );
                     break;
                 case CipheringMode.RandomDelta:
-                    this.cipheringMode = new RandomDeltaCipheringMode(this.cipheringAlgorithm);
+                    this.cipheringMode = new RandomDeltaCipheringMode(
+                        this.cipheringAlgorithm,
+                        this.paddingMode
+                    );
                     break;
                 default:
                     throw new Exception("Нет такого режима шифрования!");
@@ -120,15 +138,15 @@ namespace MyCiphering
 
         public byte[] cipherBlock(in byte[] bytes)
         {
-            return cipheringMode.cipher(in bytes, in this.key, in initializeVector);
+            return cipheringMode.cipher(in bytes, in initializeVector);
         }
 
         public byte[] decipherBlock(in byte[] bytes)
         {
-            return cipheringMode.decipher(in bytes, in this.key, in initializeVector);
+            return cipheringMode.decipher(in bytes, in initializeVector);
         }
 
-        public void cipherArray(in byte[] bytes, ref byte[] result)
+        public void cipherArray(in byte[] bytes, ref byte[] result) //TODO: передавать массив полностью в CipheringMode
         {
             byte[] cipheredBuffer;
             byte[] buffer = new byte[cipheringAlgorithm.BlockSize];
@@ -150,7 +168,7 @@ namespace MyCiphering
             }
         }
 
-        public void decipherArray(in byte[] bytes, ref byte[] result)
+        public void decipherArray(in byte[] bytes, ref byte[] result) //TODO: передавать массив полностью в CipheringMode
         {
             byte[] cipheredBuffer;
             byte[] buffer = new byte[cipheringAlgorithm.BlockSize];
@@ -160,7 +178,8 @@ namespace MyCiphering
                 {
                     byte[] lessBuffer = new byte[bytes.Length - i];
                     Array.Copy(bytes, i, buffer, 0, bytes.Length - i);
-                    cipheredBuffer = cipherBlock(paddingMode.unpackMissingBytes(buffer));
+                    cipheredBuffer = cipherBlock(buffer);
+                    cipheredBuffer = paddingMode.unpackMissingBytes(cipheredBuffer);
                     Array.Copy(cipheredBuffer, 0, result, i, cipheredBuffer.Length);
                     break;
                 }
@@ -203,7 +222,7 @@ namespace MyCiphering
                 using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
                 {
                     int bytesRead = 0;
-                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
+                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0) //TODO: передавать массив полностью в CipheringMode.cipher
                     {
                         for (int i = 0; i < bytesRead; i += cipheringAlgorithm.BlockSize)
                         {
@@ -260,27 +279,17 @@ namespace MyCiphering
                 using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
                 {
                     int bytesRead = 0;
-                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
+                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0) //TODO: передавать массив полностью в CipheringMode.decipher
                     {
                         for (int i = 0; i < bytesRead; i += cipheringAlgorithm.BlockSize)
                         {
-                            if ((bytesRead - i) < cipheringAlgorithm.BlockSize)
+                            if ((bytesRead - i) <= cipheringAlgorithm.BlockSize)
                             {
-                                byte[] lessBuffer = new byte[
-                                    (bytesRead - i) % cipheringAlgorithm.BlockSize
-                                ];
-                                Array.Copy(
-                                    buffer,
-                                    i,
-                                    lessBuffer,
-                                    0,
-                                    (bytesRead - i) % cipheringAlgorithm.BlockSize
-                                );
-                                cipheredBlockSizeBuffer = decipherBlock(
-                                    paddingMode.packMissingBytes(
-                                        lessBuffer,
-                                        cipheringAlgorithm.BlockSize
-                                    )
+                                byte[] lessBuffer = new byte[bytesRead - i];
+                                Array.Copy(buffer, i, lessBuffer, 0, bytesRead - i);
+                                cipheredBlockSizeBuffer = decipherBlock(lessBuffer);
+                                cipheredBlockSizeBuffer = paddingMode.unpackMissingBytes(
+                                    cipheredBlockSizeBuffer
                                 );
                                 fsW.Write(
                                     cipheredBlockSizeBuffer,
@@ -741,14 +750,20 @@ namespace MyCiphering
     {
         protected IGetRoundKeys getRoundKeys;
         protected IRoundTransmition roundTransmittion;
+        private byte[][] roundKeys;
 
-        public FeistelNetwork(IGetRoundKeys getRoundKeys, IRoundTransmition roundTransmittion)
+        public FeistelNetwork(
+            IGetRoundKeys getRoundKeys,
+            IRoundTransmition roundTransmittion,
+            byte[] key
+        )
         {
             this.getRoundKeys = getRoundKeys;
             this.roundTransmittion = roundTransmittion;
+            roundKeys = getRoundKeys.getRoundKeys(in key);
         }
 
-        public byte[] feistelNetwork(in byte[] bytes, in byte[] key)
+        public byte[] feistelNetwork(in byte[] bytes)
         {
             byte[] result = (byte[])bytes.Clone();
             Permutations.bitPermutations(
@@ -757,7 +772,6 @@ namespace MyCiphering
                 Permutations.StartIndex.First,
                 Permutations.Endian.BigEndian
             );
-            byte[][] roundKeys = getRoundKeys.getRoundKeys(key);
 
             for (int i = 0; i < roundTransmittion.RoundsAmount; i++)
             {
@@ -772,7 +786,7 @@ namespace MyCiphering
             return result;
         }
 
-        public byte[] feistelNetworkRev(in byte[] bytes, in byte[] key)
+        public byte[] feistelNetworkRev(in byte[] bytes)
         {
             byte[] result = (byte[])bytes.Clone();
 
@@ -782,8 +796,6 @@ namespace MyCiphering
                 Permutations.StartIndex.First,
                 Permutations.Endian.BigEndian
             );
-
-            byte[][] roundKeys = getRoundKeys.getRoundKeys(key);
 
             for (int i = roundTransmittion.RoundsAmount - 1; i >= 0; i--)
             {
@@ -806,17 +818,17 @@ namespace MyCiphering
     {
         private ICipheringAlgorithm cipheringAlgorithm;
 
-        //private IPaddingMode packingMode;
+        private IPaddingMode paddingMode;
 
-        public ECBCipheringMode(ICipheringAlgorithm cipheringAlgorithm)
+        public ECBCipheringMode(ICipheringAlgorithm cipheringAlgorithm, IPaddingMode paddingMode)
         {
             this.cipheringAlgorithm = cipheringAlgorithm;
+            this.paddingMode = paddingMode;
         }
 
-        public byte[] cipher(in byte[] dataToCipher, in byte[] key, in byte[]? IV = null)
+        public byte[] cipher(in byte[] dataToCipher, in byte[]? IV = null)
         {
             int blockSize = cipheringAlgorithm.BlockSize;
-            byte[] localKey = key;
             byte[] localDataTocipher = (byte[])dataToCipher.Clone();
             byte[] result = new byte[dataToCipher.Length];
 
@@ -828,7 +840,7 @@ namespace MyCiphering
                     int i = blockIndex * blockSize;
                     byte[] blockToCipher = new byte[blockSize];
                     Array.Copy(localDataTocipher, i, blockToCipher, 0, blockSize);
-                    byte[] encryptedBlock = cipheringAlgorithm.cipherBlock(blockToCipher, localKey);
+                    byte[] encryptedBlock = cipheringAlgorithm.cipherBlock(blockToCipher);
                     Array.Copy(encryptedBlock, 0, result, i, blockSize);
                 }
             );
@@ -836,11 +848,10 @@ namespace MyCiphering
             return result;
         }
 
-        public byte[] decipher(in byte[] dataToDecipher, in byte[] key, in byte[]? IV = null)
+        public byte[] decipher(in byte[] dataToDecipher, in byte[]? IV = null)
         {
             int blockSize = cipheringAlgorithm.BlockSize;
             byte[] localData = dataToDecipher;
-            byte[] localKey = key;
 
             byte[] result = new byte[dataToDecipher.Length];
 
@@ -852,10 +863,7 @@ namespace MyCiphering
                     int i = blockIndex * blockSize;
                     byte[] blockToDecipher = new byte[blockSize];
                     Array.Copy(localData, i, blockToDecipher, 0, blockSize);
-                    byte[] decryptedBlock = cipheringAlgorithm.decipherBlock(
-                        blockToDecipher,
-                        localKey
-                    );
+                    byte[] decryptedBlock = cipheringAlgorithm.decipherBlock(blockToDecipher);
                     Array.Copy(decryptedBlock, 0, result, i, blockSize);
                 }
             );
@@ -867,13 +875,15 @@ namespace MyCiphering
     class PCBCCipheringMode : ICipheringMode
     {
         private ICipheringAlgorithm cipheringAlgorithm;
+        private IPaddingMode paddingMode;
 
-        public PCBCCipheringMode(ICipheringAlgorithm cipheringAlgorithm)
+        public PCBCCipheringMode(ICipheringAlgorithm cipheringAlgorithm, IPaddingMode paddingMode)
         {
             this.cipheringAlgorithm = cipheringAlgorithm;
+            this.paddingMode = paddingMode;
         }
 
-        public byte[] cipher(in byte[] dataToCipher, in byte[] key, in byte[] IV)
+        public byte[] cipher(in byte[] dataToCipher, in byte[] IV)
         {
             int blockSize = cipheringAlgorithm.BlockSize;
 
@@ -890,13 +900,7 @@ namespace MyCiphering
                 {
                     xoring[j] = (byte)(IVCopy[j] ^ blockToCipher[j]);
                 }
-                Array.Copy(
-                    cipheringAlgorithm.cipherBlock(in xoring, in key),
-                    0,
-                    result,
-                    i,
-                    blockSize
-                );
+                Array.Copy(cipheringAlgorithm.cipherBlock(in xoring), 0, result, i, blockSize);
                 for (int j = 0; j < blockSize; j++)
                 {
                     IVCopy[j] = (byte)(IVCopy[j] ^ blockToCipher[j]);
@@ -906,7 +910,7 @@ namespace MyCiphering
             return result;
         }
 
-        public byte[] decipher(in byte[] dataToDecipher, in byte[] key, in byte[] IV)
+        public byte[] decipher(in byte[] dataToDecipher, in byte[] IV)
         {
             int blockSize = cipheringAlgorithm.BlockSize;
             byte[] result = new byte[dataToDecipher.Length];
@@ -919,7 +923,7 @@ namespace MyCiphering
             {
                 Array.Copy(dataToDecipher, i, blockToDecipher, 0, blockSize);
                 Array.Copy(
-                    cipheringAlgorithm.decipherBlock(blockToDecipher, key),
+                    cipheringAlgorithm.decipherBlock(in blockToDecipher),
                     0,
                     decipheredData,
                     0,
@@ -942,13 +946,15 @@ namespace MyCiphering
     class CBCCipheringMode : ICipheringMode
     {
         private ICipheringAlgorithm cipheringAlgorithm;
+        private IPaddingMode paddingMode;
 
-        public CBCCipheringMode(ICipheringAlgorithm cipheringAlgorithm)
+        public CBCCipheringMode(ICipheringAlgorithm cipheringAlgorithm, IPaddingMode paddingMode)
         {
             this.cipheringAlgorithm = cipheringAlgorithm;
+            this.paddingMode = paddingMode;
         }
 
-        public byte[] cipher(in byte[] dataToCipher, in byte[] key, in byte[] IV)
+        public byte[] cipher(in byte[] dataToCipher, in byte[] IV)
         {
             int blockSize = cipheringAlgorithm.BlockSize;
 
@@ -962,18 +968,17 @@ namespace MyCiphering
                 {
                     blockToCipher[j] = (byte)(IVCopy[j] ^ blockToCipher[j]);
                 }
-                var fr = cipheringAlgorithm.cipherBlock(blockToCipher, key);
+                var fr = cipheringAlgorithm.cipherBlock(in blockToCipher);
                 Array.Copy(fr, 0, result, i, blockSize);
                 Array.Copy(fr, 0, IVCopy, 0, blockSize);
             }
             return result;
         }
 
-        public byte[] decipher(in byte[] dataToDecipher, in byte[] key, in byte[] IV)
+        public byte[] decipher(in byte[] dataToDecipher, in byte[] IV)
         {
             int blockSize = cipheringAlgorithm.BlockSize;
             byte[] localData = dataToDecipher;
-            byte[] localKey = key;
             byte[] IVCopy = (byte[])IV.Clone();
             byte[] result = new byte[dataToDecipher.Length];
 
@@ -997,8 +1002,7 @@ namespace MyCiphering
                     }
 
                     byte[] decryptedBlock = cipheringAlgorithm.decipherBlock(
-                        localBlockToDecipher,
-                        localKey
+                        in localBlockToDecipher
                     );
 
                     for (int j = 0; j < blockSize; j++)
@@ -1016,13 +1020,15 @@ namespace MyCiphering
     class CFBCipheringMode : ICipheringMode
     {
         private ICipheringAlgorithm cipheringAlgorithm;
+        private IPaddingMode paddingMode;
 
-        public CFBCipheringMode(ICipheringAlgorithm cipheringAlgorithm)
+        public CFBCipheringMode(ICipheringAlgorithm cipheringAlgorithm, IPaddingMode paddingMode)
         {
             this.cipheringAlgorithm = cipheringAlgorithm;
+            this.paddingMode = paddingMode;
         }
 
-        public byte[] cipher(in byte[] dataToCipher, in byte[] key, in byte[] IV)
+        public byte[] cipher(in byte[] dataToCipher, in byte[] IV)
         {
             int blockSize = cipheringAlgorithm.BlockSize;
 
@@ -1032,7 +1038,7 @@ namespace MyCiphering
             byte[] blockToCipher = new byte[blockSize];
             for (int i = 0; i < result.Length; i += blockSize)
             {
-                xoring = cipheringAlgorithm.cipherBlock(Ci, key);
+                xoring = cipheringAlgorithm.cipherBlock(in Ci);
                 Array.Copy(dataToCipher, i, blockToCipher, 0, blockSize);
                 for (int j = 0; j < blockSize; j++)
                 {
@@ -1043,11 +1049,10 @@ namespace MyCiphering
             return result;
         }
 
-        public byte[] decipher(in byte[] dataToDecipher, in byte[] key, in byte[] IV)
+        public byte[] decipher(in byte[] dataToDecipher, in byte[] IV)
         {
             int blockSize = cipheringAlgorithm.BlockSize;
             byte[] localData = dataToDecipher;
-            byte[] localKey = key;
             byte[] IVCopy = IV;
             byte[] result = new byte[dataToDecipher.Length];
 
@@ -1068,7 +1073,7 @@ namespace MyCiphering
                     {
                         Array.Copy(IVCopy, 0, localXoring, 0, blockSize);
                     }
-                    var res = cipheringAlgorithm.cipherBlock(localXoring, localKey);
+                    var res = cipheringAlgorithm.cipherBlock(in localXoring);
                     for (int j = 0; j < blockSize; j++)
                     {
                         result[i + j] = (byte)(blockToDecipher[j] ^ res[j]);
@@ -1089,23 +1094,25 @@ namespace MyCiphering
         }
 
         private ICipheringAlgorithm cipheringAlgorithm;
+        private IPaddingMode paddingMode;
 
-        public OFBCipheringMode(ICipheringAlgorithm cipheringAlgorithm)
+        public OFBCipheringMode(ICipheringAlgorithm cipheringAlgorithm, IPaddingMode paddingMode)
         {
             this.cipheringAlgorithm = cipheringAlgorithm;
+            this.paddingMode = paddingMode;
         }
 
-        public byte[] cipher(in byte[] dataToCipher, in byte[] key, in byte[] IV)
+        public byte[] cipher(in byte[] dataToCipher, in byte[] IV)
         {
-            return processOFB(in dataToCipher, in key, in IV, Mode.Cipher);
+            return processOFB(in dataToCipher, in IV, Mode.Cipher);
         }
 
-        public byte[] decipher(in byte[] dataToDecipher, in byte[] key, in byte[] IV)
+        public byte[] decipher(in byte[] dataToDecipher, in byte[] IV)
         {
-            return processOFB(in dataToDecipher, in key, in IV, Mode.Decipher);
+            return processOFB(in dataToDecipher, in IV, Mode.Decipher);
         }
 
-        private byte[] processOFB(in byte[] data, in byte[] key, in byte[] IV, Mode mode)
+        private byte[] processOFB(in byte[] data, in byte[] IV, Mode mode)
         {
             int blockSize = cipheringAlgorithm.BlockSize;
 
@@ -1116,7 +1123,7 @@ namespace MyCiphering
             for (int i = 0; i < result.Length; i += blockSize)
             {
                 Array.Copy(data, i, dataBloc, 0, blockSize);
-                Ek = cipheringAlgorithm.cipherBlock(Ek, key);
+                Ek = cipheringAlgorithm.cipherBlock(in Ek);
                 for (int j = 0; j < blockSize; j++)
                 {
                     result[i + j] = (byte)(dataBloc[j] ^ Ek[j]);
@@ -1136,23 +1143,25 @@ namespace MyCiphering
         }
 
         private ICipheringAlgorithm cipheringAlgorithm;
+        private IPaddingMode paddingMode;
 
-        public CTRCipheringMode(ICipheringAlgorithm cipheringAlgorithm)
+        public CTRCipheringMode(ICipheringAlgorithm cipheringAlgorithm, IPaddingMode paddingMode)
         {
             this.cipheringAlgorithm = cipheringAlgorithm;
+            this.paddingMode = paddingMode;
         }
 
-        public byte[] cipher(in byte[] dataToCipher, in byte[] key, in byte[] IV)
+        public byte[] cipher(in byte[] dataToCipher, in byte[] IV)
         {
-            return ProcessCTR(dataToCipher, key, IV, Mode.Cipher);
+            return ProcessCTR(dataToCipher, IV, Mode.Cipher);
         }
 
-        public byte[] decipher(in byte[] dataToDecipher, in byte[] key, in byte[] IV)
+        public byte[] decipher(in byte[] dataToDecipher, in byte[] IV)
         {
-            return ProcessCTR(dataToDecipher, key, IV, Mode.Decipher);
+            return ProcessCTR(dataToDecipher, IV, Mode.Decipher);
         }
 
-        private byte[] ProcessCTR(in byte[] data, in byte[] key, in byte[] IV, Mode mode)
+        private byte[] ProcessCTR(in byte[] data, in byte[] IV, Mode mode)
         {
             int blockSize = cipheringAlgorithm.BlockSize;
             if (IV.Length != blockSize)
@@ -1165,13 +1174,13 @@ namespace MyCiphering
             for (int i = 0; i < result.Length; i += blockSize)
             {
                 byte[] counterBlock = BitConverter.GetBytes(counter);
-                byte[] encryptedCounter = cipheringAlgorithm.cipherBlock(counterBlock, key);
+                byte[] encryptedCounter = cipheringAlgorithm.cipherBlock(in counterBlock);
 
                 int currentBlockSize = Math.Min(blockSize, result.Length - i);
 
                 for (int j = 0; j < currentBlockSize; j++)
                 {
-                    result[i + j] = (byte)(data[i + j] ^ encryptedCounter[j]);
+                    result[i + j] = (byte)(data[i + j] ^ encryptedCounter[j % 8]); //TODO: другой тип для counter
                 }
 
                 counter++;
@@ -1190,23 +1199,28 @@ namespace MyCiphering
         }
 
         private ICipheringAlgorithm cipheringAlgorithm;
+        private IPaddingMode paddingMode;
 
-        public RandomDeltaCipheringMode(ICipheringAlgorithm cipheringAlgorithm)
+        public RandomDeltaCipheringMode(
+            ICipheringAlgorithm cipheringAlgorithm,
+            IPaddingMode paddingMode
+        )
         {
             this.cipheringAlgorithm = cipheringAlgorithm;
+            this.paddingMode = paddingMode;
         }
 
-        public byte[] cipher(in byte[] dataToCipher, in byte[] key, in byte[] IV)
+        public byte[] cipher(in byte[] dataToCipher, in byte[] IV)
         {
-            return ProcessRandomDelta(dataToCipher, key, IV, Mode.Cipher);
+            return ProcessRandomDelta(dataToCipher, IV, Mode.Cipher);
         }
 
-        public byte[] decipher(in byte[] dataToDecipher, in byte[] key, in byte[] IV)
+        public byte[] decipher(in byte[] dataToDecipher, in byte[] IV)
         {
-            return ProcessRandomDelta(dataToDecipher, key, IV, Mode.Decipher);
+            return ProcessRandomDelta(dataToDecipher, IV, Mode.Decipher);
         }
 
-        private byte[] ProcessRandomDelta(in byte[] data, in byte[] key, in byte[] IV, Mode mode)
+        private byte[] ProcessRandomDelta(in byte[] data, in byte[] IV, Mode mode)
         {
             int blockSize = cipheringAlgorithm.BlockSize;
             if (IV.Length != blockSize)
@@ -1219,7 +1233,7 @@ namespace MyCiphering
             for (int i = 0; i < result.Length; i += blockSize)
             {
                 byte[] deltaBlock = BitConverter.GetBytes(delta);
-                byte[] processedDelta = cipheringAlgorithm.cipherBlock(deltaBlock, key);
+                byte[] processedDelta = cipheringAlgorithm.cipherBlock(in deltaBlock);
 
                 int currentBlockSize = Math.Min(blockSize, result.Length - i);
 
@@ -1242,86 +1256,20 @@ namespace MyCiphering
     {
         public byte BlockSize { get; private set; } = 8;
 
-        public DES()
-            : base(new RoundKeys(), new RoundTransmition()) { }
+        public DES(byte[] key)
+            : base(new RoundKeys(), new RoundTransmition(), key) { }
 
-        public DES(IGetRoundKeys getRoundKeys, IRoundTransmition roundTransmition)
-            : base(getRoundKeys, roundTransmition) { }
+        public DES(byte[] key, IGetRoundKeys getRoundKeys, IRoundTransmition roundTransmition)
+            : base(getRoundKeys, roundTransmition, key) { }
 
-        public virtual byte[] cipherBlock(in byte[] blockToCipher, in byte[] key)
+        public virtual byte[] cipherBlock(in byte[] blockToCipher)
         {
-            return feistelNetwork(blockToCipher, key);
+            return feistelNetwork(blockToCipher);
         }
 
-        public virtual byte[] decipherBlock(in byte[] blockToDecipher, in byte[] key)
+        public virtual byte[] decipherBlock(in byte[] blockToDecipher)
         {
-            return feistelNetworkRev(blockToDecipher, key);
-        }
-
-        private String makeChangedFilePath(String path, String toAdd)
-        {
-            int index = path.LastIndexOf('.');
-            String newPath;
-            if (index != -1)
-            {
-                newPath = path.Substring(0, index) + toAdd + path.Substring(index);
-            }
-            else
-            {
-                newPath = path + toAdd;
-            }
-            return newPath;
-        }
-
-        public String? cipher(String pathToFile, byte[] key)
-        {
-            String newPath;
-            if (!File.Exists(pathToFile))
-            {
-                Console.WriteLine("There's no such file");
-                return null;
-            }
-            else
-            {
-                newPath = makeChangedFilePath(pathToFile, "Cip");
-                using (FileStream fsW = new FileStream(newPath, FileMode.OpenOrCreate))
-                using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
-                {
-                    byte[] buffer = new byte[8];
-                    int bytesRead = 0;
-
-                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
-                    {
-                        fsW.Write(this.cipherBlock(buffer, key), 0, 8);
-                    }
-                }
-            }
-            return newPath;
-        }
-
-        public String? decipher(String pathToCipheredFile, byte[] key)
-        {
-            String newPath;
-            if (!File.Exists(pathToCipheredFile))
-            {
-                Console.WriteLine("There's no such file");
-                return null;
-            }
-            else
-            {
-                newPath = makeChangedFilePath(pathToCipheredFile, "Decip");
-                using (FileStream fsW = new FileStream(newPath, FileMode.OpenOrCreate))
-                using (FileStream fs = new FileStream(pathToCipheredFile, FileMode.Open))
-                {
-                    byte[] buffer = new byte[8];
-                    int bytesRead = 0;
-                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
-                    {
-                        fsW.Write(this.decipherBlock(buffer, key), 0, 8);
-                    }
-                }
-            }
-            return newPath;
+            return feistelNetworkRev(blockToDecipher);
         }
     }
 
@@ -1365,13 +1313,13 @@ namespace MyCiphering
 
         private byte[][] roundsFor128BitKey(in byte[] KKey, in byte[][] keyBlocks)
         {
-            CBCCipheringMode cbc = new CBCCipheringMode(new DES());
+            CBCCipheringMode cbc = new CBCCipheringMode(new DES(KKey), new ZeroesPaddingMode());
             byte[] IV = new byte[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
 
             byte[][] roundKeys = new byte[6][];
 
             //первый раунд
-            roundKeys[0] = cbc.cipher(in keyBlocks[0], in KKey, IV);
+            roundKeys[0] = cbc.cipher(in keyBlocks[0], IV);
 
             //второй раунд
             byte[] blockToCipher = new byte[8];
@@ -1379,7 +1327,7 @@ namespace MyCiphering
             {
                 blockToCipher[j] = (byte)(keyBlocks[1][j] ^ roundKeys[0][j]);
             }
-            roundKeys[1] = cbc.cipher(in blockToCipher, in KKey, IV);
+            roundKeys[1] = cbc.cipher(in blockToCipher, IV);
 
             //остальные раунды
             for (int i = 2; i < 6; i++)
@@ -1391,20 +1339,20 @@ namespace MyCiphering
                         keyBlocks[i % 2][j] ^ roundKeys[i - 1][j] ^ upperBit[j]
                     );
                 }
-                roundKeys[i] = cbc.cipher(in blockToCipher, in KKey, IV);
+                roundKeys[i] = cbc.cipher(in blockToCipher, IV);
             }
             return roundKeys;
         }
 
         private byte[][] roundsFor192BitKey(in byte[] KKey, in byte[][] keyBlocks)
         {
-            CBCCipheringMode cbc = new CBCCipheringMode(new DES());
+            CBCCipheringMode cbc = new CBCCipheringMode(new DES(KKey), new ZeroesPaddingMode());
             byte[] IV = new byte[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
 
             byte[][] roundKeys = new byte[6][];
 
             //первый раунд
-            roundKeys[0] = cbc.cipher(in keyBlocks[0], in KKey, IV);
+            roundKeys[0] = cbc.cipher(in keyBlocks[0], IV);
 
             byte[] blockToCipher = new byte[8];
             //второй и третий раунды
@@ -1414,7 +1362,7 @@ namespace MyCiphering
                 {
                     blockToCipher[j] = (byte)(keyBlocks[i % 3][j] ^ roundKeys[i - 1][j]);
                 }
-                roundKeys[i] = cbc.cipher(in blockToCipher, in KKey, IV);
+                roundKeys[i] = cbc.cipher(in blockToCipher, IV);
             }
 
             //остальные раунды
@@ -1427,20 +1375,20 @@ namespace MyCiphering
                         keyBlocks[i % 3][j] ^ roundKeys[i - 1][j] ^ upperBit[j]
                     );
                 }
-                roundKeys[i] = cbc.cipher(in blockToCipher, in KKey, IV);
+                roundKeys[i] = cbc.cipher(in blockToCipher, IV);
             }
             return roundKeys;
         }
 
         private byte[][] roundsFor256BitKey(in byte[] KKey, in byte[][] keyBlocks)
         {
-            CBCCipheringMode cbc = new CBCCipheringMode(new DES());
+            CBCCipheringMode cbc = new CBCCipheringMode(new DES(KKey), new ZeroesPaddingMode());
             byte[] IV = new byte[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
 
             byte[][] roundKeys = new byte[6][];
 
             //первый раунд
-            roundKeys[0] = cbc.cipher(in keyBlocks[0], in KKey, IV);
+            roundKeys[0] = cbc.cipher(in keyBlocks[0], IV);
 
             byte[] blockToCipher = new byte[8];
             //второй - четвертый раунды
@@ -1450,7 +1398,7 @@ namespace MyCiphering
                 {
                     blockToCipher[j] = (byte)(keyBlocks[i % 4][j] ^ roundKeys[i - 1][j]);
                 }
-                roundKeys[i] = cbc.cipher(in blockToCipher, in KKey, IV);
+                roundKeys[i] = cbc.cipher(in blockToCipher, IV);
             }
 
             //остальные раунды
@@ -1463,7 +1411,7 @@ namespace MyCiphering
                         keyBlocks[i % 4][j] ^ roundKeys[i - 1][j] ^ upperBit[j]
                     );
                 }
-                roundKeys[i] = cbc.cipher(in blockToCipher, in KKey, IV);
+                roundKeys[i] = cbc.cipher(in blockToCipher, IV);
             }
             return roundKeys;
         }
@@ -1472,29 +1420,44 @@ namespace MyCiphering
     public class DEALRoundTransmittion : IRoundTransmition
     {
         public byte RoundsAmount { get; set; }
-        private ECBCipheringMode eccCM;
+        private ECBCipheringMode? eccCM;
 
-        public DEALRoundTransmittion()
+        public DEALRoundTransmittion(byte[] key)
         {
-            eccCM = new ECBCipheringMode(new DES());
-            RoundsAmount = 6;
-        }
-
-        public DEALRoundTransmittion(byte RoundsAmount)
-        {
-            this.RoundsAmount = RoundsAmount;
-            eccCM = new ECBCipheringMode(new DES());
+            switch (key.Length)
+            {
+                case 16:
+                {
+                    RoundsAmount = 6;
+                    break;
+                }
+                case 24:
+                {
+                    RoundsAmount = 6;
+                    break;
+                }
+                case 32:
+                {
+                    RoundsAmount = 8;
+                    break;
+                }
+                default:
+                {
+                    throw new Exception("Длина ключа должна быть 128, 192 или 256 бит!");
+                }
+            }
         }
 
         public byte[] roundTransmition(in byte[] bytes, in byte[] roundKey)
         {
+            eccCM = new ECBCipheringMode(new DES(roundKey), new ZeroesPaddingMode());
             byte[] left = new byte[4];
             byte[] right = new byte[4];
 
             Array.Copy(bytes, 0, left, 0, 4);
             Array.Copy(bytes, 4, right, 0, 4);
 
-            byte[] feistelResult = eccCM.cipher(right, roundKey);
+            byte[] feistelResult = eccCM.cipher(in right);
 
             byte[] newRight = new byte[4];
             for (int i = 0; i < 4; i++)
@@ -1507,13 +1470,14 @@ namespace MyCiphering
 
         public byte[] roundTransmitionRev(in byte[] bytes, in byte[] roundKey)
         {
+            eccCM = new ECBCipheringMode(new DES(roundKey), new ZeroesPaddingMode());
             byte[] left = new byte[4];
             byte[] right = new byte[4];
 
             Array.Copy(bytes, 0, left, 0, 4);
             Array.Copy(bytes, 4, right, 0, 4);
 
-            byte[] feistelResult = eccCM.cipher(left, roundKey);
+            byte[] feistelResult = eccCM.cipher(in left);
 
             byte[] originalRight = new byte[4];
             for (int i = 0; i < 4; i++)
@@ -1529,20 +1493,20 @@ namespace MyCiphering
     {
         public new byte BlockSize { get; private set; } = 16;
 
-        public override byte[] cipherBlock(in byte[] blockToCipher, in byte[] key)
+        public DEAL(byte[] key)
+            : base(key, new DEALRoundKeys(), new DEALRoundTransmittion(key)) { }
+
+        public DEAL(byte[] key, IGetRoundKeys getRoundKeys, IRoundTransmition roundTransmition)
+            : base(key, getRoundKeys, roundTransmition) { }
+
+        public override byte[] cipherBlock(in byte[] blockToCipher)
         {
-            return feistelNetwork(blockToCipher, key);
+            return feistelNetwork(blockToCipher);
         }
 
-        public override byte[] decipherBlock(in byte[] blockToDecipher, in byte[] key)
+        public override byte[] decipherBlock(in byte[] blockToDecipher)
         {
-            return feistelNetworkRev(blockToDecipher, key);
+            return feistelNetworkRev(blockToDecipher);
         }
-
-        public DEAL()
-            : base(new DEALRoundKeys(), new DEALRoundTransmittion()) { }
-
-        public DEAL(IGetRoundKeys getRoundKeys, IRoundTransmition roundTransmition)
-            : base(getRoundKeys, roundTransmition) { }
     }
 }
