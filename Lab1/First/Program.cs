@@ -12,8 +12,7 @@ namespace Program
         static void Main(String[] args)
         {
             //DES des = new DES();
-            DEAL deal = new DEAL();
-            /* ulong key = 123456789; */
+            /* DEAL deal = new DEAL();
             byte[] keyDEAL = new byte[16]
             {
                 0x01,
@@ -41,7 +40,7 @@ namespace Program
                 PaddingMode.ISO10126
             );
             cipher.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test");
-            cipher.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/testCip");
+            cipher.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/testCip"); */
         }
     }
 }
