@@ -9,38 +9,38 @@ namespace Program
 {
     class Program
     {
+        static void testDesVariations()
+        {
+            DES des = new DES(BitConverter.GetBytes(123123123));
+
+            Ciphering ciphering = new Ciphering(des, CipheringMode.PCBC, PaddingMode.Zeros);
+            ciphering.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test");
+            ciphering.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/testCip");
+            ciphering.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test.png");
+            ciphering.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/testCip.png");
+        }
+
+        static void testDealVariations()
+        {
+            byte[] key128 = BitConverter
+                .GetBytes(12321323123123)
+                .Concat(BitConverter.GetBytes(38254362842834))
+                .ToArray();
+            byte[] key192 = key128.Concat(BitConverter.GetBytes(21312312321312)).ToArray();
+            byte[] key256 = key192.Concat(BitConverter.GetBytes(98798737456)).ToArray();
+
+            DEAL deal = new DEAL(key128);
+
+            Ciphering ciphering = new Ciphering(deal, CipheringMode.RandomDelta, PaddingMode.Zeros);
+            ciphering.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test");
+            ciphering.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/testCip");
+            ciphering.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test.png");
+            ciphering.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/testCip.png");
+        }
+
         static void Main(String[] args)
         {
-            //DES des = new DES();
-            /* DEAL deal = new DEAL();
-            byte[] keyDEAL = new byte[16]
-            {
-                0x01,
-                0x02,
-                0x03,
-                0x04,
-                0x05,
-                0x06,
-                0x07,
-                0x08,
-                0x09,
-                0x0a,
-                0x0b,
-                0x0c,
-                0x0d,
-                0x0e,
-                0x0f,
-                0x00,
-            };
-            Ciphering cipher = new Ciphering(
-                //BitConverter.GetBytes(key),
-                keyDEAL,
-                deal,
-                CipheringMode.CBC,
-                PaddingMode.ISO10126
-            );
-            cipher.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test");
-            cipher.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/testCip"); */
+            testDealVariations();
         }
     }
 }
