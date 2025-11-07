@@ -273,15 +273,15 @@ namespace Program
                         .Concat(BitConverter.GetBytes(1323213123123132132))
                         .ToArray()
                 ),
-                CipheringMode.CTR,
+                CipheringMode.CBC,
                 PaddingMode.PKCS7
             );
-            ciphrator.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test.mp4");
-            ciphrator.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/testCip.mp4");
+            ciphrator.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/BigInt.hpp");
+            ciphrator.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/BigIntCip.hpp");
             Console.WriteLine(
                 filesAreEqual(
-                    "/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test.mp4",
-                    "/home/gaalex/MAI/5sem/Сryptography/Lab1/First/testCipDecip.mp4"
+                    "/home/gaalex/MAI/5sem/Сryptography/Lab1/First/BigInt.hpp",
+                    "/home/gaalex/MAI/5sem/Сryptography/Lab1/First/BigIntCipDecip.hpp"
                 )
             );
             /* byte[] test = new byte[16]
