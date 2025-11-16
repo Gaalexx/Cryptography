@@ -6,12 +6,14 @@ using CipheringKeys;
 
 namespace MyCiphering
 {
+    
     public class Ciphering
     {
         private ICipheringAlgorithm cipheringAlgorithm;
         private IPaddingMode paddingMode;
         private ICipheringMode cipheringMode;
         private byte[] initializeVector;
+        private readonly int bufferLength;
 
         public Ciphering(
             ICipheringAlgorithm cipheringAlgorithm,
@@ -21,6 +23,7 @@ namespace MyCiphering
         )
         {
             this.cipheringAlgorithm = cipheringAlgorithm;
+            bufferLength = cipheringAlgorithm.BlockSize * 512;
             if (initializeVector == null)
             {
                 this.initializeVector = new byte[cipheringAlgorithm.BlockSize];
@@ -169,7 +172,7 @@ namespace MyCiphering
             else
             {
                 newPath = makeChangedFilePath(pathToFile, "Cip");
-                byte[] buffer = new byte[4096];
+                byte[] buffer = new byte[bufferLength];
                 byte[] cipheredBlockSizeBuffer;
                 bool isFinalBlock = false;
                 using (FileStream fsW = new FileStream(newPath, FileMode.OpenOrCreate))
@@ -214,7 +217,7 @@ namespace MyCiphering
             else
             {
                 newPath = makeChangedFilePath(pathToFile, "Decip");
-                byte[] buffer = new byte[4096];
+                byte[] buffer = new byte[bufferLength];
                 byte[] cipheredBlockSizeBuffer;
                 bool isFinalBlock = false;
                 using (FileStream fsW = new FileStream(newPath, FileMode.OpenOrCreate))
@@ -257,7 +260,7 @@ namespace MyCiphering
             }
             else
             {
-                byte[] buffer = new byte[4096];
+                byte[] buffer = new byte[bufferLength];
                 byte[] cipheredBlockSizeBuffer;
                 bool isFinalBlock = false;
                 using (FileStream fsW = new FileStream(outputFile, FileMode.OpenOrCreate))
@@ -300,7 +303,7 @@ namespace MyCiphering
             }
             else
             {
-                byte[] buffer = new byte[4096];
+                byte[] buffer = new byte[bufferLength];
                 byte[] cipheredBlockSizeBuffer;
                 bool isFinalBlock = false;
                 using (FileStream fsW = new FileStream(outputFile, FileMode.OpenOrCreate))
@@ -329,6 +332,120 @@ namespace MyCiphering
                         );
                         fsW.Write(cipheredBlockSizeBuffer);
                     }
+                }
+            }
+            return true;
+        }
+
+        public async Task<bool> cipherFileAsync(String pathToFile)
+        {
+            if (!File.Exists(pathToFile))
+            {
+                Console.WriteLine("There's no such file");
+                return false;
+            }
+
+            String newPath = makeChangedFilePath(pathToFile, "Cip");
+            byte[] buffer = new byte[bufferLength];
+            using (FileStream fsW = new FileStream(newPath, FileMode.OpenOrCreate))
+            using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
+            {
+                int bytesRead;
+                while ((bytesRead = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    bool isFinalBlock = fs.Position == fs.Length;
+                    byte[] dataBlock = bytesRead < buffer.Length ? buffer[..bytesRead] : buffer;
+                    byte[] cipheredBlock = await cipheringMode.cipherAsync(
+                        dataBlock,
+                        this.initializeVector,
+                        isFinalBlock
+                    );
+                    await fsW.WriteAsync(cipheredBlock, 0, cipheredBlock.Length);
+                }
+            }
+            return true;
+        }
+
+        public async Task<bool> decipherFileAsync(String pathToFile)
+        {
+            if (!File.Exists(pathToFile))
+            {
+                Console.WriteLine("There's no such file");
+                return false;
+            }
+
+            String newPath = makeChangedFilePath(pathToFile, "Decip");
+            byte[] buffer = new byte[bufferLength];
+            using (FileStream fsW = new FileStream(newPath, FileMode.OpenOrCreate))
+            using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
+            {
+                int bytesRead;
+                while ((bytesRead = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    bool isFinalBlock = fs.Position == fs.Length;
+                    byte[] dataBlock = bytesRead < buffer.Length ? buffer[..bytesRead] : buffer;
+                    byte[] decipheredBlock = await cipheringMode.decipherAsync(
+                        dataBlock,
+                        this.initializeVector,
+                        isFinalBlock
+                    );
+                    await fsW.WriteAsync(decipheredBlock, 0, decipheredBlock.Length);
+                }
+            }
+            return true;
+        }
+
+        public async Task<bool> cipherFileAsync(String pathToFile, String outputFile)
+        {
+            if (!File.Exists(pathToFile))
+            {
+                Console.WriteLine("There's no such file");
+                return false;
+            }
+
+            byte[] buffer = new byte[bufferLength];
+            using (FileStream fsW = new FileStream(outputFile, FileMode.OpenOrCreate))
+            using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
+            {
+                int bytesRead;
+                while ((bytesRead = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    bool isFinalBlock = fs.Position == fs.Length;
+                    byte[] dataBlock = bytesRead < buffer.Length ? buffer[..bytesRead] : buffer;
+                    byte[] cipheredBlock = await cipheringMode.cipherAsync(
+                        dataBlock,
+                        this.initializeVector,
+                        isFinalBlock
+                    );
+                    await fsW.WriteAsync(cipheredBlock, 0, cipheredBlock.Length);
+                }
+            }
+            return true;
+        }
+
+        public async Task<bool> decipherFileAsync(String pathToFile, String outputFile)
+        {
+            if (!File.Exists(pathToFile))
+            {
+                Console.WriteLine("There's no such file");
+                return false;
+            }
+
+            byte[] buffer = new byte[bufferLength];
+            using (FileStream fsW = new FileStream(outputFile, FileMode.OpenOrCreate))
+            using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
+            {
+                int bytesRead;
+                while ((bytesRead = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    bool isFinalBlock = fs.Position == fs.Length;
+                    byte[] dataBlock = bytesRead < buffer.Length ? buffer[..bytesRead] : buffer;
+                    byte[] decipheredBlock = await cipheringMode.decipherAsync(
+                        dataBlock,
+                        this.initializeVector,
+                        isFinalBlock
+                    );
+                    await fsW.WriteAsync(decipheredBlock, 0, decipheredBlock.Length);
                 }
             }
             return true;

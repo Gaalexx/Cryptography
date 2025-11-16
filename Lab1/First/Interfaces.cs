@@ -5,12 +5,15 @@ namespace MyCiphering
     {
         public byte[] cipher(in byte[] dataToCipher, in byte[] IV, bool isFinalBlock);
         public byte[] decipher(in byte[] dataToDecipher, in byte[] IV, bool isFinalBlock);
+        public Task<byte[]> cipherAsync(byte[] dataToCipher, byte[] IV, bool isFinalBlock);
+        public Task<byte[]> decipherAsync(byte[] dataToDecipher, byte[] IV, bool isFinalBlock);
     }
 
     public interface IPaddingMode
     {
         public byte[] packMissingBytes(in byte[] bytes, int neededLength);
         public byte[] unpackMissingBytes(in byte[] bytes);
+        //public byte[] unpackMissingBytes(in byte[] bytes, int neededLength);
     }
 
     public interface IGetRoundKeys

@@ -87,6 +87,12 @@ namespace MyCiphering
             }
             return result;
         }
+
+        public Task<byte[]> cipherAsync(byte[] dataToCipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => cipher(dataToCipher, IV, isFinalBlock));
+
+        public Task<byte[]> decipherAsync(byte[] dataToDecipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => decipher(dataToDecipher, IV, isFinalBlock));
     }
 
     class PCBCCipheringMode : ICipheringMode
@@ -175,6 +181,12 @@ namespace MyCiphering
             }
             return result;
         }
+
+        public Task<byte[]> cipherAsync(byte[] dataToCipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => cipher(dataToCipher, IV, isFinalBlock));
+
+        public Task<byte[]> decipherAsync(byte[] dataToDecipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => decipher(dataToDecipher, IV, isFinalBlock));
     }
 
     class CBCCipheringMode : ICipheringMode
@@ -266,6 +278,12 @@ namespace MyCiphering
             }
             return result;
         }
+
+        public Task<byte[]> cipherAsync(byte[] dataToCipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => cipher(dataToCipher, IV, isFinalBlock));
+
+        public Task<byte[]> decipherAsync(byte[] dataToDecipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => decipher(dataToDecipher, IV, isFinalBlock));
     }
 
     class CFBCipheringMode : ICipheringMode
@@ -352,6 +370,12 @@ namespace MyCiphering
 
             return result;
         }
+
+        public Task<byte[]> cipherAsync(byte[] dataToCipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => cipher(dataToCipher, IV, isFinalBlock));
+
+        public Task<byte[]> decipherAsync(byte[] dataToDecipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => decipher(dataToDecipher, IV, isFinalBlock));
     }
 
     class OFBCipheringMode : ICipheringMode
@@ -436,6 +460,12 @@ namespace MyCiphering
 
             return result;
         }
+
+        public Task<byte[]> cipherAsync(byte[] dataToCipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => cipher(dataToCipher, IV, isFinalBlock));
+
+        public Task<byte[]> decipherAsync(byte[] dataToDecipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => decipher(dataToDecipher, IV, isFinalBlock));
     }
 
     class CTRCipheringMode : ICipheringMode
@@ -540,6 +570,12 @@ namespace MyCiphering
 
             return result;
         }
+
+        public Task<byte[]> cipherAsync(byte[] dataToCipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => cipher(dataToCipher, IV, isFinalBlock));
+
+        public Task<byte[]> decipherAsync(byte[] dataToDecipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => decipher(dataToDecipher, IV, isFinalBlock));
     }
 
     class RandomDeltaCipheringMode : ICipheringMode
@@ -647,6 +683,12 @@ namespace MyCiphering
 
             return result;
         }
+
+        public Task<byte[]> cipherAsync(byte[] dataToCipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => cipher(dataToCipher, IV, isFinalBlock));
+
+        public Task<byte[]> decipherAsync(byte[] dataToDecipher, byte[] IV, bool isFinalBlock) =>
+            Task.Run(() => decipher(dataToDecipher, IV, isFinalBlock));
     }
 #endregion
 }

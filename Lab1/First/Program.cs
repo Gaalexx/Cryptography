@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -264,9 +265,35 @@ namespace Program
             }
         }
 
-        static void Main(String[] args)
+        static async Task CompareAsyncVsSync(string filePath)
         {
-            Ciphering ciphrator = new Ciphering(
+            var ciphrator = new Ciphering(
+                new DEAL(
+                    BitConverter
+                        .GetBytes(2131231312321231)
+                        .Concat(BitConverter.GetBytes(1323213123123132132))
+                        .ToArray()
+                ),
+                CipheringMode.ECB,
+                PaddingMode.PKCS7
+            );
+
+            var sw = Stopwatch.StartNew();
+            await ciphrator.cipherFileAsync(filePath);
+            await ciphrator.decipherFileAsync(makeChangedFilePath(filePath, "Cip"));
+            sw.Stop();
+            Console.WriteLine($"Async: {sw.ElapsedMilliseconds} ms");
+
+            sw.Restart();
+            ciphrator.cipherFile(filePath);
+            ciphrator.decipherFile(makeChangedFilePath(filePath, "Cip"));
+            sw.Stop();
+            Console.WriteLine($"Sync: {sw.ElapsedMilliseconds} ms");
+        }
+
+        static async Task Main(String[] args)
+        {
+            /* Ciphering ciphrator = new Ciphering(
                 new DEAL(
                     BitConverter
                         .GetBytes(2131231312321231)
@@ -283,7 +310,12 @@ namespace Program
                     "/home/gaalex/MAI/5sem/Сryptography/Lab1/First/BigInt.hpp",
                     "/home/gaalex/MAI/5sem/Сryptography/Lab1/First/BigIntCipDecip.hpp"
                 )
+            ); */
+
+            await CompareAsyncVsSync( /* "/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test.mp4" */
+                "/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test"
             );
+
             /* byte[] test = new byte[16]
             {
                 0x12,
