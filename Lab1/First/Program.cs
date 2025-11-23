@@ -312,9 +312,7 @@ namespace Program
                 )
             ); */
 
-            await CompareAsyncVsSync( /* "/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test.mp4" */
-                "/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test"
-            );
+            await CompareAsyncVsSync("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test.png");
 
             /* byte[] test = new byte[16]
             {
