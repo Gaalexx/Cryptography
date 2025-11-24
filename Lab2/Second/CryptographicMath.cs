@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace Program
@@ -171,6 +172,56 @@ namespace Program
                 n /= 2;
             }
             return res;
+        }
+
+        public static List<BigInteger> ContinuedFraction(BigInteger a, BigInteger b)
+        {
+            if (b == 0)
+            {
+                throw new ArgumentException("b can't be equal to 0");
+            }
+            if (a <= 0 || b <= 0)
+            {
+                throw new ArgumentException("a and b must be positive");
+            }
+
+            List<BigInteger> result = new List<BigInteger>();
+            while (b != 0)
+            {
+                BigInteger q = a / b;
+                result.Add(q);
+                BigInteger temp = b;
+                b = a - q * b;
+                a = temp;
+            }
+            return result;
+        }
+
+        public static List<(BigInteger, BigInteger)> GetConvergents(List<BigInteger> cf)
+        {
+            List<(BigInteger, BigInteger)> convergents = new List<(BigInteger, BigInteger)>();
+            if (cf.Count == 0)
+            {
+                return convergents;
+            }
+
+            BigInteger p_prev = 1,
+                p_curr = cf[0];
+            BigInteger q_prev = 0,
+                q_curr = 1;
+            convergents.Add((p_curr, q_curr));
+
+            for (int i = 1; i < cf.Count; i++)
+            {
+                BigInteger p_next = cf[i] * p_curr + p_prev;
+                BigInteger q_next = cf[i] * q_curr + q_prev;
+                convergents.Add((p_next, q_next));
+                p_prev = p_curr;
+                p_curr = p_next;
+                q_prev = q_curr;
+                q_curr = q_next;
+            }
+            return convergents;
         }
     }
 }

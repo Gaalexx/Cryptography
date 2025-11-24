@@ -19,7 +19,7 @@ namespace Program
             Console.WriteLine(millerRabin.Test(BigInteger.Parse("15263953"), 0.75));
             Console.WriteLine(fermaTest.Test(BigInteger.Parse("15263953"), 0.75)); */
 
-            RSA rsa = new RSA(SimplicityTestType.SolovayStrassen, 0.9, 1024);
+            RSA rsa = new RSA(SimplicityTestType.SolovayStrassen, 0.9, 128);
             BigInteger bigInteger = BigInteger.Parse("152639512312312321313213");
             BigInteger encrypted = rsa.encrypt(bigInteger);
             BigInteger decrypted = rsa.decrypt(encrypted);

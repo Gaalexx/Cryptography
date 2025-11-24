@@ -13,7 +13,7 @@ namespace Program
 
     interface IKeyGenerator
     {
-        public (BigInteger, BigInteger) generateKeyPair();
+        public (BigInteger, BigInteger, BigInteger, BigInteger) generateKeys();
     }
 
     class RSAKeyGenerator : IKeyGenerator
@@ -22,7 +22,7 @@ namespace Program
         private readonly double probability;
         private readonly int bitLen;
 
-        private bool tryFermaAttack(BigInteger p, BigInteger q, int maxIterations = 100000)
+        private bool tryFermaAttack(BigInteger p, BigInteger q, int maxIterations = 3)
         {
             BigInteger n = p * q;
 
@@ -76,7 +76,49 @@ namespace Program
             return false;
         }
 
-        //private bool tryVienerAttack(BigInteger)
+        private bool tryVienerAttack(BigInteger e, BigInteger n)
+        {
+            var cf = CryptographicMath.ContinuedFraction(e, n);
+            var convergents = CryptographicMath.GetConvergents(cf);
+
+            foreach (var (k, d) in convergents)
+            {
+                if (k == 0 || d <= 0)
+                {
+                    continue;
+                }
+
+                BigInteger edMinus1 = e * d - 1;
+                if (edMinus1 % k != 0)
+                {
+                    continue;
+                }
+
+                BigInteger phi = edMinus1 / k;
+                BigInteger sum = n - phi + 1;
+                BigInteger discriminant = sum * sum - 4 * n;
+
+                if (discriminant < 0)
+                {
+                    continue;
+                }
+
+                BigInteger sqrtD = CryptographicMath.Sqrt(discriminant);
+                if (sqrtD * sqrtD != discriminant)
+                {
+                    continue;
+                }
+
+                BigInteger p = (sum + sqrtD) / 2;
+                BigInteger q = (sum - sqrtD) / 2;
+
+                if (p * q == n && p > 1 && q > 1)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         public RSAKeyGenerator(
             SimplicityTestType simplicityTestType,
@@ -135,15 +177,44 @@ namespace Program
             return prime;
         }
 
-        public (BigInteger, BigInteger) generateKeyPair()
+        private BigInteger getExponent(BigInteger fi)
         {
-            var res = (this.getPrime(), this.getPrime());
-            while (!tryFermaAttack(res.Item1, res.Item2))
+            BigInteger e = getPrime(); // = 65537;
+
+            while (CryptographicMath.EuclideanAlgorithm(e, fi) != 1)
             {
-                res = (this.getPrime(), this.getPrime());
+                e = getPrime();
             }
-            //тут сделать проверки на атаки
-            return res;
+            return e;
+        }
+
+        public (BigInteger, BigInteger, BigInteger, BigInteger) generateKeys()
+        {
+            BigInteger p = this.getPrime(),
+                q = this.getPrime();
+
+            while (tryFermaAttack(p, q))
+            {
+                p = this.getPrime();
+                q = this.getPrime();
+                Console.WriteLine($"Q = {q}");
+                Console.WriteLine($"P = {p}");
+                Console.WriteLine("____________________");
+            }
+            BigInteger fi = (p - 1) * (q - 1);
+            BigInteger e = getExponent(fi);
+            BigInteger n = p * q;
+
+            while (tryVienerAttack(e, n))
+            {
+                e = getExponent(fi);
+                Console.WriteLine($"E = {e}");
+                Console.WriteLine("____________________");
+            }
+
+            var res = CryptographicMath.ExtendedEuclideanAlgorithm(e, fi);
+            BigInteger d = res.Item2 < 0 ? res.Item2 + fi : res.Item2;
+            return (p, q, e, d);
         }
     }
 
@@ -156,27 +227,11 @@ namespace Program
             e,
             d;
 
-        private BigInteger getExponent(BigInteger fi)
-        {
-            BigInteger e = keyGenerator.getPrime(); // = 65537;
-
-            while (CryptographicMath.EuclideanAlgorithm(e, fi) != 1)
-            {
-                e = keyGenerator.getPrime();
-            }
-            return e;
-        }
-
         public RSA(SimplicityTestType simplicityTestType, double probability, int bitLen)
         {
             this.keyGenerator = new RSAKeyGenerator(simplicityTestType, probability, bitLen);
-            (p, q) = this.keyGenerator.generateKeyPair();
+            (p, q, e, d) = this.keyGenerator.generateKeys();
             n = p * q;
-            BigInteger fi = (p - 1) * (q - 1);
-            e = getExponent(fi); //65537; //getExponent(fi);
-            var res = CryptographicMath.ExtendedEuclideanAlgorithm(e, fi);
-            d = res.Item2 < 0 ? res.Item2 + fi : res.Item2;
-
             Console.WriteLine($"p = {p}");
             Console.WriteLine($"q = {q}");
             Console.WriteLine($"n = {n}");
