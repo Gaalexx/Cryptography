@@ -117,7 +117,7 @@ namespace Program
         }
     }
 
-    class MillerRabin : SimplicityTestAbstract
+    class MillerRabinTest : SimplicityTestAbstract
     {
         public override bool Iteration(BigInteger testValue)
         {

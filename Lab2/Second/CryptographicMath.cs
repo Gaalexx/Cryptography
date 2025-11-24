@@ -16,6 +16,49 @@ namespace Program
             }
         }
 
+        public static BigInteger Sqrt(BigInteger n)
+        {
+            if (n < 0)
+            {
+                throw new ArgumentException(
+                    "Квадратный корень определен только для неотрицательных чисел"
+                );
+            }
+
+            if (n == 0 || n == 1)
+            {
+                return n;
+            }
+
+            BigInteger left = 1;
+            BigInteger right = n;
+            BigInteger result = 0;
+
+            while (left <= right)
+            {
+                BigInteger mid = (left + right) / 2;
+
+                BigInteger square = mid * mid;
+
+                if (square == n)
+                {
+                    return mid;
+                }
+
+                if (square < n)
+                {
+                    left = mid + 1;
+                    result = mid;
+                }
+                else
+                {
+                    right = mid - 1;
+                }
+            }
+
+            return result;
+        }
+
         public static bool isPrime(BigInteger n)
         {
             /* for (BigInteger i = 2; i <= BigInteger.; i++)
