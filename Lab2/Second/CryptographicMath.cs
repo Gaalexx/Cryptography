@@ -5,6 +5,12 @@ namespace Program
 {
     class CryptographicMath
     {
+        public enum AlgorithmWay
+        {
+            Iterational,
+            Recursive,
+        }
+
         private static BigInteger RecursiveEuclidianAlgorithm(BigInteger a, BigInteger b)
         {
             if (a == 0)
@@ -15,6 +21,17 @@ namespace Program
             {
                 return RecursiveEuclidianAlgorithm(b % a, a);
             }
+        }
+
+        private static BigInteger IterationalEuclidianAlgorithm(BigInteger a, BigInteger b)
+        {
+            while (a != 0)
+            {
+                BigInteger temp = a;
+                a = b % a;
+                b = temp;
+            }
+            return b;
         }
 
         public static BigInteger Sqrt(BigInteger n)
@@ -134,12 +151,55 @@ namespace Program
             return RecursiveYakobiStep(a, b, r);
         }
 
-        public static BigInteger EuclideanAlgorithm(BigInteger a, BigInteger b)
+        public static BigInteger EuclideanAlgorithm(
+            BigInteger a,
+            BigInteger b,
+            AlgorithmWay algorithmWay = AlgorithmWay.Iterational
+        )
         {
-            return RecursiveEuclidianAlgorithm(a, b);
+            switch (algorithmWay)
+            {
+                case AlgorithmWay.Iterational:
+                    return IterationalEuclidianAlgorithm(a, b);
+                case AlgorithmWay.Recursive:
+                    return RecursiveEuclidianAlgorithm(a, b);
+                default:
+                    return IterationalEuclidianAlgorithm(a, b);
+            }
         }
 
-        public static (BigInteger, BigInteger, BigInteger) ExtendedEuclideanAlgorithm(
+        private static (BigInteger, BigInteger, BigInteger) IterationalExtendedEuclideanAlgorithm(
+            BigInteger a,
+            BigInteger b
+        )
+        {
+            BigInteger prevCoeffA = 1,
+                currCoeffA = 0;
+            BigInteger prevCoeffB = 0,
+                currCoeffB = 1;
+
+            while (a != 0)
+            {
+                BigInteger quotient = b / a;
+                BigInteger remainder = b % a;
+
+                BigInteger newCoeffA = prevCoeffA - quotient * currCoeffA;
+                BigInteger newCoeffB = prevCoeffB - quotient * currCoeffB;
+
+                b = a;
+                a = remainder;
+
+                prevCoeffA = currCoeffA;
+                currCoeffA = newCoeffA;
+
+                prevCoeffB = currCoeffB;
+                currCoeffB = newCoeffB;
+            }
+
+            return (b, prevCoeffA, prevCoeffB);
+        }
+
+        private static (BigInteger, BigInteger, BigInteger) RecursiveExtendedEuclideanAlgorithm(
             BigInteger a,
             BigInteger b
         )
@@ -148,11 +208,28 @@ namespace Program
             {
                 return (b, 0, 1);
             }
-            var res = ExtendedEuclideanAlgorithm(b % a, a);
+            var res = RecursiveExtendedEuclideanAlgorithm(b % a, a);
             BigInteger gcd = res.Item1,
                 x1 = res.Item2,
                 y1 = res.Item3;
             return (gcd, y1 - (b / a) * x1, x1);
+        }
+
+        public static (BigInteger, BigInteger, BigInteger) ExtendedEuclideanAlgorithm(
+            BigInteger a,
+            BigInteger b,
+            AlgorithmWay algorithmWay = AlgorithmWay.Iterational
+        )
+        {
+            switch (algorithmWay)
+            {
+                case AlgorithmWay.Iterational:
+                    return IterationalExtendedEuclideanAlgorithm(a, b);
+                case AlgorithmWay.Recursive:
+                    return RecursiveExtendedEuclideanAlgorithm(a, b);
+                default:
+                    return IterationalExtendedEuclideanAlgorithm(a, b);
+            }
         }
 
         public static BigInteger ModularExponentiation(

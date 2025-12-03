@@ -65,6 +65,7 @@ namespace Program
             BigInteger k = (BigInteger)(
                 Math.Ceiling(Math.Log(1 - minimalProbability) / Math.Log(error))
             );
+            //Console.WriteLine($"k = {k}");
             return BigInteger.Max(k, 10);
         }
 
