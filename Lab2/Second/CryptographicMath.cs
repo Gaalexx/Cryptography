@@ -77,24 +77,11 @@ namespace Program
             return result;
         }
 
-        public static bool isPrime(BigInteger n)
-        {
-            /* for (BigInteger i = 2; i <= BigInteger.; i++)
-            {
-                if (n % i == 0)
-                {
-                    return false;
-                }
-            } */
-            //переделать под проверки (потом)
-            return true;
-        }
-
         public static BigInteger LezhandrSymbol(BigInteger a, BigInteger p)
         {
-            if (!isPrime(p) || p == 2)
+            if (p == 2 || p % 2 == 0)
             {
-                throw new Exception("p must be prime and not equal to 2");
+                throw new Exception("p must be odd and not equal to 2");
             }
             if (a % p == 0)
             {
@@ -133,7 +120,36 @@ namespace Program
             }
         }
 
-        public static BigInteger YakobiSymbol(BigInteger a, BigInteger b)
+        private static BigInteger IterationalTakobi(BigInteger a, BigInteger b, BigInteger r)
+        {
+            while (a != 0)
+            {
+                BigInteger t = 0;
+                while (a % 2 == 0)
+                {
+                    a /= 2;
+                    t++;
+                    if (b % 8 == 3 || b % 8 == 5)
+                    {
+                        r = -r;
+                    }
+                }
+                if (a % 4 == 3 && b % 4 == 3)
+                {
+                    r = -r;
+                }
+                BigInteger c = a;
+                a = b % c;
+                b = c;
+            }
+            return r;
+        }
+
+        public static BigInteger YakobiSymbol(
+            BigInteger a,
+            BigInteger b,
+            AlgorithmWay algorithmWay = AlgorithmWay.Iterational
+        )
         {
             if (EuclideanAlgorithm(a, b) != 1)
             {
@@ -148,7 +164,15 @@ namespace Program
                     r = -r;
                 }
             }
-            return RecursiveYakobiStep(a, b, r);
+            switch (algorithmWay)
+            {
+                case AlgorithmWay.Iterational:
+                    return IterationalTakobi(a, b, r);
+                case AlgorithmWay.Recursive:
+                    return RecursiveYakobiStep(a, b, r);
+                default:
+                    return IterationalTakobi(a, b, r);
+            }
         }
 
         public static BigInteger EuclideanAlgorithm(
@@ -168,11 +192,15 @@ namespace Program
             }
         }
 
-        private static (BigInteger, BigInteger, BigInteger) IterationalExtendedEuclideanAlgorithm(
-            BigInteger a,
-            BigInteger b
-        )
+        private static (
+            BigInteger gcd,
+            BigInteger x,
+            BigInteger y
+        ) IterationalExtendedEuclideanAlgorithm(BigInteger a, BigInteger b)
         {
+            BigInteger origA = a,
+                origB = b;
+
             BigInteger prevCoeffA = 1,
                 currCoeffA = 0;
             BigInteger prevCoeffB = 0,
@@ -196,7 +224,14 @@ namespace Program
                 currCoeffB = newCoeffB;
             }
 
-            return (b, prevCoeffA, prevCoeffB);
+            BigInteger gcd = BigInteger.Abs(b);
+            if (b < 0)
+            {
+                prevCoeffB = -prevCoeffB;
+                prevCoeffA = -prevCoeffA;
+            }
+
+            return (gcd, prevCoeffB, prevCoeffA);
         }
 
         private static (BigInteger, BigInteger, BigInteger) RecursiveExtendedEuclideanAlgorithm(

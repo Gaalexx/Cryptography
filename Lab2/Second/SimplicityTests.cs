@@ -66,7 +66,7 @@ namespace Program
                 Math.Ceiling(Math.Log(1 - minimalProbability) / Math.Log(error))
             );
             //Console.WriteLine($"k = {k}");
-            return BigInteger.Max(k, 10);
+            return BigInteger.Min(k, 10);
         }
 
         public abstract bool Iteration(BigInteger testValue);

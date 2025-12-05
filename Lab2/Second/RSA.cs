@@ -22,102 +22,20 @@ namespace Program
         private readonly double probability;
         private readonly int bitLen;
 
-        private bool tryFermaAttack(BigInteger p, BigInteger q, int maxIterations = 3)
+        private bool tryFermaAttack(BigInteger p, BigInteger q)
         {
+            BigInteger diff = BigInteger.Abs(p - q);
             BigInteger n = p * q;
+            BigInteger threshold = CryptographicMath.Sqrt(n) / 100;
 
-            if (p == q)
-            {
-                return true;
-            }
-
-            BigInteger A = CryptographicMath.Sqrt(n);
-            if (A * A < n)
-            {
-                A++;
-            }
-
-            BigInteger maxA = (p + q) / 2;
-            BigInteger minA = A;
-
-            for (int i = 0; i < maxIterations; i++)
-            {
-                BigInteger x = A * A - n;
-
-                if (x < 0)
-                {
-                    A++;
-                    continue;
-                }
-
-                BigInteger B = CryptographicMath.Sqrt(x);
-
-                if (B * B == x)
-                {
-                    if (A - B == p && A + B == q)
-                    {
-                        return true;
-                    }
-                    if (A - B == q && A + B == p)
-                    {
-                        return true;
-                    }
-                    break;
-                }
-
-                A++;
-
-                if (A > maxA + 1000)
-                {
-                    break;
-                }
-            }
-
-            return false;
+            return diff < threshold;
         }
 
-        private bool tryVienerAttack(BigInteger e, BigInteger n)
+        private bool tryVienerAttack(BigInteger d, BigInteger n)
         {
-            var cf = CryptographicMath.ContinuedFraction(e, n);
-            var convergents = CryptographicMath.GetConvergents(cf);
-
-            foreach (var (k, d) in convergents)
-            {
-                if (k == 0 || d <= 0)
-                {
-                    continue;
-                }
-
-                BigInteger edMinus1 = e * d - 1;
-                if (edMinus1 % k != 0)
-                {
-                    continue;
-                }
-
-                BigInteger phi = edMinus1 / k;
-                BigInteger sum = n - phi + 1;
-                BigInteger discriminant = sum * sum - 4 * n;
-
-                if (discriminant < 0)
-                {
-                    continue;
-                }
-
-                BigInteger sqrtD = CryptographicMath.Sqrt(discriminant);
-                if (sqrtD * sqrtD != discriminant)
-                {
-                    continue;
-                }
-
-                BigInteger p = (sum + sqrtD) / 2;
-                BigInteger q = (sum - sqrtD) / 2;
-
-                if (p * q == n && p > 1 && q > 1)
-                {
-                    return true;
-                }
-            }
-            return false;
+            BigInteger d2 = d * d;
+            BigInteger d4 = d2 * d2;
+            return d4 < n;
         }
 
         public RSAKeyGenerator(
@@ -295,7 +213,8 @@ namespace Program
 
         private BigInteger getExponent(BigInteger fi)
         {
-            BigInteger e = getPrime(); // = 65537;
+            BigInteger e = /* getPrime(); // =  */
+                65537;
 
             while (CryptographicMath.EuclideanAlgorithm(e, fi) != 1)
             {
@@ -306,30 +225,42 @@ namespace Program
 
         public (BigInteger, BigInteger, BigInteger, BigInteger) generateKeys()
         {
-            BigInteger p = this.getPrime(),
-                q = this.getPrime();
+            BigInteger p,
+                q,
+                fi,
+                e,
+                d,
+                n;
 
-            /* while (tryFermaAttack(p, q))
+            do
             {
                 p = this.getPrime();
                 q = this.getPrime();
-                Console.WriteLine($"Q = {q}");
-                Console.WriteLine($"P = {p}");
-                Console.WriteLine("____________________");
-            } */
-            BigInteger fi = (p - 1) * (q - 1);
-            BigInteger e = getExponent(fi);
-            BigInteger n = p * q;
 
-            /* while (tryVienerAttack(e, n))
-            {
+                if (tryFermaAttack(p, q))
+                {
+                    /* Console.WriteLine($"Ferma attack vulnerable: Q = {q}, P = {p}");
+                    Console.WriteLine("____________________"); */
+                    continue;
+                }
+
+                fi = (p - 1) * (q - 1);
                 e = getExponent(fi);
-                Console.WriteLine($"E = {e}");
-                Console.WriteLine("____________________");
-            } */
+                n = p * q;
 
-            var res = CryptographicMath.ExtendedEuclideanAlgorithm(e, fi);
-            BigInteger d = res.Item2 < 0 ? res.Item2 + fi : res.Item2;
+                var res = CryptographicMath.ExtendedEuclideanAlgorithm(e, fi);
+                d = res.Item2 < 0 ? res.Item2 + fi : res.Item2;
+
+                if (tryVienerAttack(d, n))
+                {
+                    /* Console.WriteLine($"Wiener attack vulnerable: d = {d}");
+                    Console.WriteLine("____________________"); */
+                    continue;
+                }
+
+                break;
+            } while (true);
+
             return (p, q, e, d);
         }
     }
