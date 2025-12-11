@@ -315,18 +315,26 @@ namespace Program
 
             //await CompareAsyncVsSync("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test.png");
             Ciphering ciphrator = new Ciphering(
-                new Rijndael(
+                new TripleDes(
                     BitConverter
                         .GetBytes(2131231312321231)
                         .Concat(BitConverter.GetBytes(1323213123123132132))
+                        .ToArray(),
+                    BitConverter
+                        .GetBytes(21376584231)
+                        .Concat(BitConverter.GetBytes(1323213132132))
+                        .ToArray(),
+                    BitConverter
+                        .GetBytes(21399999321231)
+                        .Concat(BitConverter.GetBytes(13232138882132))
                         .ToArray()
                 ),
                 CipheringMode.CBC,
                 PaddingMode.PKCS7
             );
 
-            ciphrator.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/BigInt.hpp");
-            ciphrator.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/BigIntCip.hpp");
+            ciphrator.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1and3/First/test.mp4");
+            ciphrator.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1and3/First/testCip.mp4");
 
             /* byte[] test = new byte[16]
             {

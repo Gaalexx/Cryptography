@@ -11,13 +11,13 @@ namespace Program
         {
             Console.WriteLine("=== RSA Tests ===");
 
-            RSA rsa = new RSA(SimplicityTestType.MillerRabin, 0.999, 512);
+            RSA rsa = new RSA(SimplicityTestType.MillerRabin, 0.999, 2048);
 
             BigInteger[] testMessages =
-            {
+            {   
                 new BigInteger(42),
                 new BigInteger(12345),
-                BigInteger.Parse("123456789012345"),
+                BigInteger.Parse("12345132213123131231231231236789012999999345"),
             };
 
             foreach (var msg in testMessages)
@@ -54,9 +54,26 @@ namespace Program
             }
         }
 
+        static void TestWienerAttack()
+        {
+            Console.WriteLine("\n=== Wiener Attack Test ===");
+            VienerAttack va = new VienerAttack(90581, 17993);
+            var res = va.attack();
+            if (res != null)
+            {
+                Console.WriteLine(
+                    $"Attack SUCCESS: d = {res.Value.d}, fi = {res.Value.fi}, fractions = {res.Value.factorialConvergents.Count}"
+                );
+            }
+            else
+            {
+                Console.WriteLine("Attack FAILED");
+            }
+        }
+
         static void Main(String[] args)
         {
-            /* Console.WriteLine(CryptographicMath.EuclideanAlgorithm(12123, 332));
+            Console.WriteLine(CryptographicMath.EuclideanAlgorithm(12123, 332));
             Console.WriteLine(CryptographicMath.ModularExponentiation(3, 5, 5));
             Console.WriteLine(CryptographicMath.YakobiSymbol(7, 15));
 
@@ -65,31 +82,13 @@ namespace Program
             FermaTest fermaTest = new FermaTest();
             Console.WriteLine(solovayStrassenTest.Test(BigInteger.Parse("15263953"), 0.75));
             Console.WriteLine(millerRabin.Test(BigInteger.Parse("15263953"), 0.75));
-            Console.WriteLine(fermaTest.Test(BigInteger.Parse("15263953"), 0.75)); */
-            //TestRSA();
+            Console.WriteLine(fermaTest.Test(BigInteger.Parse("15263953"), 0.75));
+
+            TestRSA();
 
             MeasureRSACreationTime();
 
-            /* RSA rsa = new RSA(SimplicityTestType.SolovayStrassen, 0.9, 1024);
-            BigInteger bigInteger = BigInteger.Parse("152639512312312321313213");
-            BigInteger encrypted = rsa.encrypt(bigInteger);
-            BigInteger decrypted = rsa.decrypt(encrypted);
-            Console.WriteLine(encrypted);
-            Console.WriteLine(decrypted);
-            Console.WriteLine(bigInteger == decrypted); */
-
-            /* VienerAttack va = new VienerAttack(90581, 17993);
-            var res = va.attack();
-            if (res != null)
-            {
-                Console.WriteLine(
-                    $"d = {res.Value.d}\nfi = {res.Value.fi}\nfractions amount = {res.Value.factorialConvergents.Count}"
-                );
-            }
-            else
-            {
-                Console.WriteLine("Attack failed");
-            } */
+            TestWienerAttack();
         }
     }
 }
