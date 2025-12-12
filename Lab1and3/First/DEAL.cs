@@ -232,12 +232,14 @@ namespace MyCiphering
 
         public override byte[] cipherBlock(in byte[] blockToCipher)
         {
-            return feistelNetwork(blockToCipher);
+            byte[] bytes = (byte[])blockToCipher.Clone();
+            return feistelNetwork(ref bytes);
         }
 
         public override byte[] decipherBlock(in byte[] blockToDecipher)
         {
-            return feistelNetworkRev(blockToDecipher);
+            byte[] bytes = (byte[])blockToDecipher.Clone();
+            return feistelNetworkRev(ref bytes);
         }
     }
 }

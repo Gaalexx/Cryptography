@@ -135,14 +135,14 @@ namespace MyCiphering
             return cipheringMode.decipher(in bytes, in initializeVector, true);
         }
 
-        public void cipherArray(in byte[] bytes, ref byte[] result)
+        public byte[] cipherArray(in byte[] bytes)
         {
-            result = cipheringMode.cipher(bytes, initializeVector, true);
+            return cipheringMode.cipher(bytes, initializeVector, true);
         }
 
-        public void decipherArray(in byte[] bytes, ref byte[] result)
+        public byte[] decipherArray(in byte[] bytes)
         {
-            result = cipheringMode.decipher(bytes, initializeVector, true);
+            return cipheringMode.decipher(bytes, initializeVector, true);
         }
 
         private String makeChangedFilePath(String path, String toAdd)

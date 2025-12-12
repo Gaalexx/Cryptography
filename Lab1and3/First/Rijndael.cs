@@ -16,7 +16,7 @@ namespace AlgorithmLab3
             {
                 case 16:
                 {
-                    break; // значения RoundsAmount пересчитываем ниже
+                    break;
                 }
                 case 24:
                 {

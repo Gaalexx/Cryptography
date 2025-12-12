@@ -134,7 +134,7 @@ namespace Program
                 PaddingMode.ISO10126,
             };
 
-            ICipheringAlgorithm[] cipheringAlgorithms = new ICipheringAlgorithm[3]
+            ICipheringAlgorithm[] cipheringAlgorithms = new ICipheringAlgorithm[4]
             {
                 /* new DES(BitConverter.GetBytes(213213213123123)), //DES */
                 new DEAL( //DEAL с 128 битовым ключом
@@ -159,6 +159,20 @@ namespace Program
                         .Concat(BitConverter.GetBytes(12321312321312323))
                         .ToArray()
                         .Concat(BitConverter.GetBytes(12321312312312331))
+                        .ToArray()
+                ),
+                new TripleDes(
+                    BitConverter
+                        .GetBytes(2131231312321231)
+                        .Concat(BitConverter.GetBytes(1323213123123132132))
+                        .ToArray(),
+                    BitConverter
+                        .GetBytes(2131231999321231)
+                        .Concat(BitConverter.GetBytes(999123123132132))
+                        .ToArray(),
+                    BitConverter
+                        .GetBytes(213123131239881)
+                        .Concat(BitConverter.GetBytes(13232178823132132))
                         .ToArray()
                 ),
             };
@@ -224,11 +238,9 @@ namespace Program
                         {
                             try
                             {
-                                byte[] cipheredArray = new byte[arrayToCipher.Length];
-                                ciphrator.cipherArray(arrayToCipher, ref cipheredArray);
+                                byte[] cipheredArray = ciphrator.cipherArray(arrayToCipher);
 
-                                byte[] decipheredArray = new byte[arrayToCipher.Length];
-                                ciphrator.decipherArray(in cipheredArray, ref decipheredArray);
+                                byte[] decipheredArray = ciphrator.decipherArray(in cipheredArray);
 
                                 if (ArraysAreEqual(arrayToCipher, decipheredArray))
                                 {
@@ -314,19 +326,12 @@ namespace Program
             ); */
 
             //await CompareAsyncVsSync("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test.png");
+            //testEverything(null, "/home/gaalex/MAI/5sem/Сryptography/Lab1and3/First/test.png");
             Ciphering ciphrator = new Ciphering(
-                new TripleDes(
+                new Magenta(
                     BitConverter
                         .GetBytes(2131231312321231)
                         .Concat(BitConverter.GetBytes(1323213123123132132))
-                        .ToArray(),
-                    BitConverter
-                        .GetBytes(21376584231)
-                        .Concat(BitConverter.GetBytes(1323213132132))
-                        .ToArray(),
-                    BitConverter
-                        .GetBytes(21399999321231)
-                        .Concat(BitConverter.GetBytes(13232138882132))
                         .ToArray()
                 ),
                 CipheringMode.CBC,

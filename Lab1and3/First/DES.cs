@@ -209,63 +209,24 @@ namespace MyCiphering
             roundKeys = getRoundKeys.getRoundKeys(in key);
         }
 
-        public byte[] feistelNetwork(in byte[] bytes)
+        public byte[] feistelNetwork(ref byte[] bytes)
         {
-            byte[] result = (byte[])bytes.Clone();
-            if (bytes.Length == 8)
-            {
-                Permutations.bitPermutations(
-                    ref result,
-                    KeyArray.getIP(),
-                    Permutations.StartIndex.First,
-                    Permutations.Endian.BigEndian
-                );
-            }
-
             for (int i = 0; i < roundTransmittion.RoundsAmount; i++)
             {
-                result = roundTransmittion.roundTransmition(in result, roundKeys[i]);
+                bytes = roundTransmittion.roundTransmition(in bytes, roundKeys[i % roundKeys.Length]);
             }
 
-            if (bytes.Length == 8)
-            {
-                Permutations.bitPermutations(
-                    ref result,
-                    KeyArray.getIPRev(),
-                    Permutations.StartIndex.First,
-                    Permutations.Endian.BigEndian
-                );
-            }
-            return result;
+            return bytes;
         }
 
-        public byte[] feistelNetworkRev(in byte[] bytes)
+        public byte[] feistelNetworkRev(ref byte[] bytes)
         {
-            byte[] result = (byte[])bytes.Clone();
-            if (bytes.Length == 8)
-            {
-                Permutations.bitPermutations(
-                    ref result,
-                    KeyArray.getIP(),
-                    Permutations.StartIndex.First,
-                    Permutations.Endian.BigEndian
-                );
-            }
-
             for (int i = roundTransmittion.RoundsAmount - 1; i >= 0; i--)
             {
-                result = roundTransmittion.roundTransmitionRev(in result, roundKeys[i]);
+                bytes = roundTransmittion.roundTransmitionRev(in bytes, roundKeys[i % roundKeys.Length]);
             }
-            if (bytes.Length == 8)
-            {
-                Permutations.bitPermutations(
-                    ref result,
-                    KeyArray.getIPRev(),
-                    Permutations.StartIndex.First,
-                    Permutations.Endian.BigEndian
-                );
-            }
-            return result;
+
+            return bytes;
         }
     }
 
@@ -281,12 +242,46 @@ namespace MyCiphering
 
         public virtual byte[] cipherBlock(in byte[] blockToCipher)
         {
-            return feistelNetwork(blockToCipher);
+            byte[] result = (byte[])blockToCipher.Clone();
+
+            Permutations.bitPermutations(
+                ref result,
+                KeyArray.getIP(),
+                Permutations.StartIndex.First,
+                Permutations.Endian.BigEndian
+            );
+            result = feistelNetwork(ref result);
+
+            Permutations.bitPermutations(
+                ref result,
+                KeyArray.getIPRev(),
+                Permutations.StartIndex.First,
+                Permutations.Endian.BigEndian
+            );
+            return result;
         }
 
         public virtual byte[] decipherBlock(in byte[] blockToDecipher)
         {
-            return feistelNetworkRev(blockToDecipher);
+            byte[] result = (byte[])blockToDecipher.Clone();
+
+            Permutations.bitPermutations(
+                ref result,
+                KeyArray.getIP(),
+                Permutations.StartIndex.First,
+                Permutations.Endian.BigEndian
+            );
+
+            result = feistelNetworkRev(ref result);
+
+            Permutations.bitPermutations(
+                ref result,
+                KeyArray.getIPRev(),
+                Permutations.StartIndex.First,
+                Permutations.Endian.BigEndian
+            );
+
+            return result;
         }
     }
 }

@@ -2,7 +2,7 @@ using System.Numerics;
 using MathNet.Numerics;
 using MathNet.Numerics.Random;
 
-namespace Program
+namespace DiffyHellman
 {
     interface ISimplicityTest
     {
@@ -158,6 +158,105 @@ namespace Program
         public override double GetSingleTestErrorProbability()
         {
             return 0.25;
+        }
+    }
+
+    class Primes
+    {
+        private static readonly int[] SmallPrimes =
+        {
+            3,
+            5,
+            7,
+            11,
+            13,
+            17,
+            19,
+            23,
+            29,
+            31,
+            37,
+            41,
+            43,
+            47,
+            53,
+            59,
+            61,
+            67,
+            71,
+            73,
+            79,
+            83,
+            89,
+            97,
+        };
+
+        public static readonly SolovayStrassenTest solovayStrassen = new SolovayStrassenTest();
+        public static readonly MillerRabinTest millerRabin = new MillerRabinTest();
+        public static readonly FermaTest ferma = new FermaTest();
+
+        public static BigInteger getPrime(
+            int bitLen,
+            ISimplicityTest? simplicityTest,
+            double probability = 0.9999
+        )
+        {
+            if (simplicityTest == null)
+            {
+                simplicityTest = millerRabin;
+            }
+
+            BigInteger? result = null;
+            object lockObj = new object();
+            int threadCount = Environment.ProcessorCount;
+
+            Parallel.For(
+                0,
+                threadCount,
+                (i, state) =>
+                {
+                    Random random = new Random(Guid.NewGuid().GetHashCode());
+                    int byteCount = (bitLen + 7) / 8;
+                    byte[] bytes = new byte[byteCount];
+
+                    while (!state.IsStopped)
+                    {
+                        random.NextBytes(bytes);
+                        bytes[byteCount - 1] |= 0x80;
+                        bytes[0] |= 0x01;
+
+                        BigInteger candidate = new BigInteger(bytes, isUnsigned: true);
+
+                        bool divisible = false;
+                        foreach (int prime in SmallPrimes)
+                        {
+                            if (candidate % prime == 0 && candidate != prime)
+                            {
+                                divisible = true;
+                                break;
+                            }
+                        }
+
+                        if (divisible)
+                            continue;
+
+                        if (simplicityTest.Test(candidate, probability))
+                        {
+                            lock (lockObj)
+                            {
+                                if (result == null)
+                                {
+                                    result = candidate;
+                                    state.Stop();
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            );
+
+            return result!.Value;
         }
     }
 }
