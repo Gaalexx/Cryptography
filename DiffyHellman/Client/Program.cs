@@ -6,19 +6,12 @@ using MyCiphering;
 
 namespace DiffyHellman
 {
-    /* class DiffyHellman
-    {
-        public static BigInteger expa(BigInteger g, BigInteger a, BigInteger p)
-        {
-            return CryptographicMath.ModularExponentiation(g, a, p);
-        }
-    } */
 
     internal sealed class Program
     {
         private const int DefaultPort = 5000;
 
-        public static void Main1(String[] args)
+        public static void MainDemonstrationOfSteps(String[] args)
         {
             BigInteger g = 123123123,
                 p = Primes.getPrime(128, null);
@@ -96,14 +89,6 @@ namespace DiffyHellman
             return (host, port, name.Trim());
         }
     }
-
-    /* struct ClientCipheringInfo
-    {
-        public BigInteger k,
-            p,
-            a;
-        public byte[] key;
-    } */
 
     internal sealed class ChatClient
     {
