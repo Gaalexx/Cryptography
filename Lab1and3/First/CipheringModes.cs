@@ -527,7 +527,7 @@ namespace MyCiphering
                     ProcessCTR(in localDataToDecipher, in IV, Mode.Decipher)
                 );
             }
-            return ProcessCTR(in dataToDecipher, in IV, Mode.Decipher);
+            return ProcessCTR(in localDataToDecipher, in IV, Mode.Decipher);
         }
 
         private byte[] ProcessCTR(in byte[] data, in byte[] IV, Mode mode)
@@ -538,37 +538,34 @@ namespace MyCiphering
 
             byte[] result = new byte[data.Length];
 
-            ulong counter = BitConverter.ToUInt64(IV, 0);
+            byte[] counter = (byte[])IV.Clone();
 
             for (int i = 0; i < result.Length; i += blockSize)
             {
-                byte[] counterBlock = BitConverter.GetBytes(counter);
-                if (counterBlock.Length < blockSize)
-                {
-                    byte[] buffer = new byte[blockSize];
-                    Array.Fill<byte>(buffer, 0);
-                    Array.Copy(
-                        counterBlock,
-                        0,
-                        buffer,
-                        blockSize - counterBlock.Length,
-                        counterBlock.Length
-                    );
-                    counterBlock = buffer;
-                }
-                byte[] encryptedCounter = cipheringAlgorithm.cipherBlock(in counterBlock);
-
+                byte[] encryptedCounter = cipheringAlgorithm.cipherBlock(in counter);
                 int currentBlockSize = Math.Min(blockSize, result.Length - i);
 
                 for (int j = 0; j < currentBlockSize; j++)
                 {
-                    result[i + j] = (byte)(data[i + j] ^ encryptedCounter[j % 8]); //TODO: другой тип для counter
+                    result[i + j] = (byte)(data[i + j] ^ encryptedCounter[j]);
                 }
 
-                counter++;
+                IncrementCounter(counter);
             }
 
             return result;
+        }
+
+        private static void IncrementCounter(byte[] counter)
+        {
+            for (int i = 0; i < counter.Length; i++)
+            {
+                counter[i]++;
+                if (counter[i] != 0)
+                {
+                    break;
+                }
+            }
         }
 
         public Task<byte[]> cipherAsync(byte[] dataToCipher, byte[] IV, bool isFinalBlock) =>
@@ -656,20 +653,11 @@ namespace MyCiphering
 
             byte[] result = new byte[data.Length];
 
-            ulong delta = BitConverter.ToUInt64(IV, 0);
+            byte[] delta = (byte[])IV.Clone();
 
             for (int i = 0; i < result.Length; i += blockSize)
             {
-                byte[] deltaBlock = BitConverter.GetBytes((ulong)delta);
-                if (deltaBlock.Length < blockSize)
-                {
-                    byte[] zeroes = new byte[blockSize - deltaBlock.Length];
-                    Array.Fill<byte>(zeroes, 0);
-                    deltaBlock = zeroes.Concat(deltaBlock).ToArray();
-                }
-
-                byte[] processedDelta = cipheringAlgorithm.cipherBlock(in deltaBlock);
-
+                byte[] processedDelta = cipheringAlgorithm.cipherBlock(in delta);
                 int currentBlockSize = Math.Min(blockSize, result.Length - i);
 
                 for (int j = 0; j < currentBlockSize; j++)
@@ -677,11 +665,21 @@ namespace MyCiphering
                     result[i + j] = (byte)(data[i + j] ^ processedDelta[j]);
                 }
 
-                ulong deltaIncrement = BitConverter.ToUInt64(processedDelta, 0);
-                delta += deltaIncrement;
+                AddLittleEndian(delta, processedDelta);
             }
 
             return result;
+        }
+
+        private static void AddLittleEndian(byte[] target, byte[] addend)
+        {
+            int carry = 0;
+            for (int i = 0; i < target.Length; i++)
+            {
+                int sum = target[i] + addend[i] + carry;
+                target[i] = (byte)sum;
+                carry = sum >> 8;
+            }
         }
 
         public Task<byte[]> cipherAsync(byte[] dataToCipher, byte[] IV, bool isFinalBlock) =>

@@ -1,84 +1,61 @@
 ﻿using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Program
 {
-    class RC4
-    {
-        protected byte[] S;
-        protected byte i,
-            j;
-        protected byte[] key;
-
-        public RC4(byte[] key)
-        {
-            this.key = key;
-            S = new byte[256];
-
-            for (int k = 0; k < 256; k++)
-            {
-                S[k] = (byte)k;
-            }
-
-            int jLocal = 0;
-            for (int k = 0; k < 256; k++)
-            {
-                jLocal = (jLocal + S[k] + key[k % key.Length]) & 0xFF;
-                byte temp = S[k];
-                S[k] = S[jLocal];
-                S[jLocal] = temp;
-            }
-
-            i = 0;
-            j = 0;
-        }
-
-        protected byte GetKeystreamByte()
-        {
-            i = (byte)((i + 1) & 0xFF);
-
-            j = (byte)((j + S[i]) & 0xFF);
-
-            byte temp = S[i];
-            S[i] = S[j];
-            S[j] = temp;
-
-            int t = (S[i] + S[j]) & 0xFF;
-            return S[t];
-        }
-
-        public byte[] Process(byte[] data)
-        {
-            byte[] output = new byte[data.Length];
-            for (int k = 0; k < data.Length; k++)
-            {
-                byte keyByte = GetKeystreamByte();
-                output[k] = (byte)(data[k] ^ keyByte);
-            }
-            return output;
-        }
-
-        public byte[] cipher(byte[] plaintext) => Process(plaintext);
-
-        public byte[] decipher(byte[] ciphertext) => Process(ciphertext);
-    }
-
     class Program
     {
-        public static void Main(String[] args)
+        private const string InputFile = "input.txt";
+        private const string EncryptedFile = "encrypted.bin";
+        private const string DecryptedFile = "decrypted.bin";
+        private const string KeyValue = "0x0123456789ABCDEF";
+
+        public static async Task<int> Main()
         {
-            byte[] key = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF };
-            byte[] plaintext = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF };
+            if (!RunTest())
+            {
+                Console.Error.WriteLine("Self-test failed. Aborting.");
+                return 1;
+            }
 
-            RC4 rc4 = new RC4(key);
+            if (!File.Exists(InputFile))
+            {
+                var sampleText = $"Sample RC4 input generated at {DateTime.UtcNow:O}";
+                File.WriteAllText(InputFile, sampleText, Encoding.UTF8);
+            }
 
-            Console.WriteLine($"Plaintext: {BitConverter.ToString(plaintext)}");
+            byte[] key;
+            if (KeyValue.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                string hex = KeyValue.Substring(2);
+                if (hex.Length % 2 != 0)
+                {
+                    throw new ArgumentException("Hex key length must be even.");
+                }
 
-            var ciphertext = rc4.cipher(plaintext);
-            Console.WriteLine($"Ciphertext: {BitConverter.ToString(ciphertext)}");
+                key = new byte[hex.Length / 2];
+                for (int i = 0; i < key.Length; i++)
+                {
+                    key[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
+                }
+            }
+            else
+            {
+                key = Encoding.UTF8.GetBytes(KeyValue);
+            }
 
-            RC4 rc4ForDecrypt = new RC4(key);
-            var decrypted = rc4ForDecrypt.decipher(ciphertext);
-            Console.WriteLine($"Decrypted: {BitConverter.ToString(decrypted)}");
+            var encryptor = new RC4(key);
+            await encryptor.ProcessFileAsync(InputFile, EncryptedFile);
+
+            var decryptor = new RC4(key);
+            await decryptor.ProcessFileAsync(EncryptedFile, DecryptedFile);
+            return 0;
         }
+
+        private static bool RunTest() => RC4.RunSelfTest();
     }
 }

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Numerics;
 using MathNet.Numerics;
 
@@ -71,9 +73,89 @@ namespace Program
             }
         }
 
+        static void TestFileEncryption(string? sourceFile = null)
+        {
+            Console.WriteLine("\n=== File Encryption Test ===");
+
+            string baseName = $"rsa_file_test_{Guid.NewGuid():N}";
+            string encryptedPath = Path.Combine(Path.GetTempPath(), $"{baseName}.enc");
+            string decryptedPath = Path.Combine(Path.GetTempPath(), $"{baseName}.dec");
+
+            string inputPath;
+            byte[] content;
+            bool generatedInput = false;
+
+            if (!string.IsNullOrWhiteSpace(sourceFile))
+            {
+                inputPath = sourceFile;
+                try
+                {
+                    content = File.ReadAllBytes(inputPath);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"File test result: FAILED (cannot read input file: {ex.Message})");
+                    return;
+                }
+            }
+            else
+            {
+                inputPath = Path.Combine(Path.GetTempPath(), $"{baseName}.bin");
+                content = new byte[256];
+                new Random(12345).NextBytes(content);
+                File.WriteAllBytes(inputPath, content);
+                generatedInput = true;
+            }
+
+            RSA rsa = new RSA(SimplicityTestType.MillerRabin, 0.999, 512);
+
+            try
+            {
+                rsa.encryptFile(inputPath, encryptedPath);
+                rsa.decryptFile(encryptedPath, decryptedPath);
+
+                byte[] decrypted = File.ReadAllBytes(decryptedPath);
+                bool passed = content.SequenceEqual(decrypted);
+                Console.WriteLine($"File test result: {(passed ? "PASSED" : "FAILED")}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"File test result: FAILED ({ex.Message})");
+            }
+            finally
+            {
+                foreach (var path in new[] { encryptedPath, decryptedPath })
+                {
+                    try
+                    {
+                        if (File.Exists(path))
+                        {
+                            File.Delete(path);
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+                if (generatedInput)
+                {
+                    try
+                    {
+                        if (File.Exists(inputPath))
+                        {
+                            File.Delete(inputPath);
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
+
         static void Main(String[] args)
         {
-            Console.WriteLine(CryptographicMath.EuclideanAlgorithm(12123, 332));
+            /* Console.WriteLine(CryptographicMath.EuclideanAlgorithm(12123, 332));
             Console.WriteLine(CryptographicMath.ModularExponentiation(3, 5, 5));
             Console.WriteLine(CryptographicMath.YakobiSymbol(7, 15));
 
@@ -88,7 +170,9 @@ namespace Program
 
             MeasureRSACreationTime();
 
-            TestWienerAttack();
+            TestWienerAttack(); */
+
+            TestFileEncryption("/home/gaalex/MAI/5sem/Cryptography/Lab2/Second/test.txt");
         }
     }
 }

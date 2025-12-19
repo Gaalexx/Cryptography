@@ -446,7 +446,7 @@ namespace MathLab3
             Buffer.BlockCopy(tmp, 0, state, 0, state.Length);
         }
 
-        public static void MixColumns(byte[] state, int Nb)
+        public static void MixColumns(byte[] state, int Nb, ushort modPoly = ModPoly)
         {
             byte[] tmp = new byte[state.Length];
 
@@ -459,39 +459,43 @@ namespace MathLab3
                 byte a2 = state[i + 2];
                 byte a3 = state[i + 3];
 
-                tmp[i + 0] = (byte)(
-                    GaluaField.Multiplication(0x02, a0)
-                    ^ GaluaField.Multiplication(0x03, a1)
-                    ^ a2
-                    ^ a3
-                );
+                tmp[i + 0] =
+                    (byte)(
+                        GaluaField.Multiplication(0x02, a0, modPoly)
+                        ^ GaluaField.Multiplication(0x03, a1, modPoly)
+                        ^ a2
+                        ^ a3
+                    );
 
-                tmp[i + 1] = (byte)(
-                    a0
-                    ^ GaluaField.Multiplication(0x02, a1)
-                    ^ GaluaField.Multiplication(0x03, a2)
-                    ^ a3
-                );
+                tmp[i + 1] =
+                    (byte)(
+                        a0
+                        ^ GaluaField.Multiplication(0x02, a1, modPoly)
+                        ^ GaluaField.Multiplication(0x03, a2, modPoly)
+                        ^ a3
+                    );
 
-                tmp[i + 2] = (byte)(
-                    a0
-                    ^ a1
-                    ^ GaluaField.Multiplication(0x02, a2)
-                    ^ GaluaField.Multiplication(0x03, a3)
-                );
+                tmp[i + 2] =
+                    (byte)(
+                        a0
+                        ^ a1
+                        ^ GaluaField.Multiplication(0x02, a2, modPoly)
+                        ^ GaluaField.Multiplication(0x03, a3, modPoly)
+                    );
 
-                tmp[i + 3] = (byte)(
-                    GaluaField.Multiplication(0x03, a0)
-                    ^ a1
-                    ^ a2
-                    ^ GaluaField.Multiplication(0x02, a3)
-                );
+                tmp[i + 3] =
+                    (byte)(
+                        GaluaField.Multiplication(0x03, a0, modPoly)
+                        ^ a1
+                        ^ a2
+                        ^ GaluaField.Multiplication(0x02, a3, modPoly)
+                    );
             }
 
             Buffer.BlockCopy(tmp, 0, state, 0, state.Length);
         }
 
-        public static void InvMixColumns(byte[] state, int Nb)
+        public static void InvMixColumns(byte[] state, int Nb, ushort modPoly = ModPoly)
         {
             byte[] tmp = new byte[state.Length];
 
@@ -504,33 +508,37 @@ namespace MathLab3
                 byte a2 = state[i + 2];
                 byte a3 = state[i + 3];
 
-                tmp[i + 0] = (byte)(
-                    GaluaField.Multiplication(0x0e, a0)
-                    ^ GaluaField.Multiplication(0x0b, a1)
-                    ^ GaluaField.Multiplication(0x0d, a2)
-                    ^ GaluaField.Multiplication(0x09, a3)
-                );
+                tmp[i + 0] =
+                    (byte)(
+                        GaluaField.Multiplication(0x0e, a0, modPoly)
+                        ^ GaluaField.Multiplication(0x0b, a1, modPoly)
+                        ^ GaluaField.Multiplication(0x0d, a2, modPoly)
+                        ^ GaluaField.Multiplication(0x09, a3, modPoly)
+                    );
 
-                tmp[i + 1] = (byte)(
-                    GaluaField.Multiplication(0x09, a0)
-                    ^ GaluaField.Multiplication(0x0e, a1)
-                    ^ GaluaField.Multiplication(0x0b, a2)
-                    ^ GaluaField.Multiplication(0x0d, a3)
-                );
+                tmp[i + 1] =
+                    (byte)(
+                        GaluaField.Multiplication(0x09, a0, modPoly)
+                        ^ GaluaField.Multiplication(0x0e, a1, modPoly)
+                        ^ GaluaField.Multiplication(0x0b, a2, modPoly)
+                        ^ GaluaField.Multiplication(0x0d, a3, modPoly)
+                    );
 
-                tmp[i + 2] = (byte)(
-                    GaluaField.Multiplication(0x0d, a0)
-                    ^ GaluaField.Multiplication(0x09, a1)
-                    ^ GaluaField.Multiplication(0x0e, a2)
-                    ^ GaluaField.Multiplication(0x0b, a3)
-                );
+                tmp[i + 2] =
+                    (byte)(
+                        GaluaField.Multiplication(0x0d, a0, modPoly)
+                        ^ GaluaField.Multiplication(0x09, a1, modPoly)
+                        ^ GaluaField.Multiplication(0x0e, a2, modPoly)
+                        ^ GaluaField.Multiplication(0x0b, a3, modPoly)
+                    );
 
-                tmp[i + 3] = (byte)(
-                    GaluaField.Multiplication(0x0b, a0)
-                    ^ GaluaField.Multiplication(0x0d, a1)
-                    ^ GaluaField.Multiplication(0x09, a2)
-                    ^ GaluaField.Multiplication(0x0e, a3)
-                );
+                tmp[i + 3] =
+                    (byte)(
+                        GaluaField.Multiplication(0x0b, a0, modPoly)
+                        ^ GaluaField.Multiplication(0x0d, a1, modPoly)
+                        ^ GaluaField.Multiplication(0x09, a2, modPoly)
+                        ^ GaluaField.Multiplication(0x0e, a3, modPoly)
+                    );
             }
 
             Buffer.BlockCopy(tmp, 0, state, 0, state.Length);

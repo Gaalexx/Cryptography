@@ -1,10 +1,17 @@
 using System;
+using System.Collections.Concurrent;
+using MathLab3;
 
 namespace MyCiphering
 {
     class MagentaArray
     {
-        public static readonly byte[] SBox =
+        public const ushort DefaultModPoly = 0x165; // полином, под который собран изначальный SBox
+
+        private static readonly ConcurrentDictionary<ushort, byte[]> SBoxCache =
+            new ConcurrentDictionary<ushort, byte[]>();
+
+        private static readonly byte[] DefaultSBox =
         {
             1,
             2,
@@ -263,5 +270,32 @@ namespace MyCiphering
             178,
             0,
         };
+
+        public static byte[] GetSBox(ushort modPoly = DefaultModPoly)
+        {
+            if (modPoly == DefaultModPoly)
+            {
+                return (byte[])DefaultSBox.Clone();
+            }
+
+            if (!GaluaField.IrreducibilityCheck(modPoly))
+            {
+                throw new ArgumentException("Полином должен быть неприводимым степени 8.");
+            }
+
+            return SBoxCache.GetOrAdd(modPoly, BuildSBox);
+        }
+
+        private static byte[] BuildSBox(ushort modPoly)
+        {
+            byte[] sBox = new byte[256];
+            sBox[0] = 1;
+            for (int i = 1; i < 255; i++)
+            {
+                sBox[i] = GaluaField.Multiplication(sBox[i - 1], 0x02, modPoly);
+            }
+            sBox[255] = 0;
+            return sBox;
+        }
     }
 }

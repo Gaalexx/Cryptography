@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Numerics;
 using MathNet.Numerics.Random;
 
@@ -294,6 +295,136 @@ namespace Program
         public BigInteger decrypt(BigInteger cipherText)
         {
             return CryptographicMath.ModularExponentiation(cipherText, d, n);
+        }
+
+        private int getPlainBlockSize()
+        {
+            byte[] modulusBytes = n.ToByteArray();
+            int msbIndex = modulusBytes.Length - 1;
+            while (msbIndex > 0 && modulusBytes[msbIndex] == 0)
+            {
+                msbIndex--;
+            }
+
+            int bitLength = msbIndex * 8;
+            byte msb = modulusBytes[msbIndex];
+            while (msb > 0)
+            {
+                msb >>= 1;
+                bitLength++;
+            }
+
+            return Math.Max(1, (bitLength - 1) / 8);
+        }
+
+        private int getCipherBlockSize()
+        {
+            return Math.Max(1, n.ToByteArray().Length);
+        }
+
+        public void encryptFile(string inputPath, string outputPath)
+        {
+            int plainBlockSize = getPlainBlockSize();
+            int cipherBlockSize = getCipherBlockSize();
+
+            using FileStream input = File.OpenRead(inputPath);
+            using FileStream output = File.Create(outputPath);
+
+            long originalLength = input.Length;
+            byte[] lengthBytes = BitConverter.GetBytes(originalLength);
+            output.Write(lengthBytes, 0, lengthBytes.Length);
+
+            byte[] buffer = new byte[plainBlockSize];
+            int bytesRead;
+            while ((bytesRead = input.Read(buffer, 0, plainBlockSize)) > 0)
+            {
+                byte[] block = new byte[bytesRead + 1];
+                Array.Copy(buffer, block, bytesRead);
+                BigInteger plain = new BigInteger(block);
+
+                BigInteger cipher = encrypt(plain);
+                byte[] cipherBytes = cipher.ToByteArray();
+
+                if (cipherBytes.Length > cipherBlockSize)
+                {
+                    throw new InvalidOperationException(
+                        "Cipher block size exceeded modulus byte length."
+                    );
+                }
+
+                byte[] paddedCipher = new byte[cipherBlockSize];
+                Array.Copy(cipherBytes, paddedCipher, cipherBytes.Length);
+                output.Write(paddedCipher, 0, paddedCipher.Length);
+            }
+        }
+
+        public void decryptFile(string inputPath, string outputPath)
+        {
+            int plainBlockSize = getPlainBlockSize();
+            int cipherBlockSize = getCipherBlockSize();
+
+            using FileStream input = File.OpenRead(inputPath);
+            if (input.Length < sizeof(long))
+            {
+                throw new InvalidDataException("Encrypted file is too short to contain metadata.");
+            }
+
+            byte[] lengthBytes = new byte[sizeof(long)];
+            int headerRead = input.Read(lengthBytes, 0, lengthBytes.Length);
+            if (headerRead != lengthBytes.Length)
+            {
+                throw new IOException("Failed to read encrypted file header.");
+            }
+            long originalLength = BitConverter.ToInt64(lengthBytes, 0);
+            long remaining = originalLength;
+
+            using FileStream output = File.Create(outputPath);
+            byte[] buffer = new byte[cipherBlockSize];
+            int bytesRead;
+
+            while ((bytesRead = input.Read(buffer, 0, cipherBlockSize)) > 0)
+            {
+                if (bytesRead != cipherBlockSize)
+                {
+                    throw new InvalidDataException("Encrypted file is corrupted (partial block).");
+                }
+
+                byte[] cipherBlockWithSign = new byte[cipherBlockSize + 1];
+                Array.Copy(buffer, cipherBlockWithSign, cipherBlockSize);
+                BigInteger cipher = new BigInteger(cipherBlockWithSign);
+
+                BigInteger plain = decrypt(cipher);
+                byte[] plainBytes = plain.ToByteArray();
+
+                if (plainBytes.Length == plainBlockSize + 1 && plainBytes[^1] == 0)
+                {
+                    Array.Resize(ref plainBytes, plainBlockSize);
+                }
+                else if (plainBytes.Length > plainBlockSize)
+                {
+                    throw new InvalidDataException("Decrypted block is larger than expected.");
+                }
+                else if (plainBytes.Length < plainBlockSize)
+                {
+                    byte[] paddedPlain = new byte[plainBlockSize];
+                    Array.Copy(plainBytes, paddedPlain, plainBytes.Length);
+                    plainBytes = paddedPlain;
+                }
+
+                int bytesToWrite = (int)Math.Min(plainBlockSize, remaining);
+                output.Write(plainBytes, 0, bytesToWrite);
+                remaining -= bytesToWrite;
+
+                if (remaining <= 0)
+                {
+                    break;
+                }
+            }
+
+            if (remaining != 0)
+            {
+                throw new InvalidDataException("Encrypted file is truncated or contains extra data.");
+            }
         }
     }
 

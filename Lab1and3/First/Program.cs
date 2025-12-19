@@ -134,46 +134,25 @@ namespace Program
                 PaddingMode.ISO10126,
             };
 
-            ICipheringAlgorithm[] cipheringAlgorithms = new ICipheringAlgorithm[4]
+            /*  ICipheringAlgorithm[] cipheringAlgorithms = new ICipheringAlgorithm[1]
+             {
+                 new Magenta( //DEAL с 128 битовым ключом
+                     BitConverter
+                         .GetBytes(2131231312321231)
+                         .Concat(BitConverter.GetBytes(1323213123123132132))
+                         .ToArray(), 463 //425, 433, 445, 451, 463, 471, 477, 487, 499, 501, 505 (неприводимые палиндромы)
+                 )
+             }; */
+
+            ICipheringAlgorithm[] cipheringAlgorithms = new ICipheringAlgorithm[1]
             {
                 /* new DES(BitConverter.GetBytes(213213213123123)), //DES */
-                new DEAL( //DEAL с 128 битовым ключом
-                    BitConverter
-                        .GetBytes(2131231312321231)
-                        .Concat(BitConverter.GetBytes(1323213123123132132))
-                        .ToArray()
-                ),
-                new DEAL( //DEAL с 192 битовым ключом
-                    BitConverter
-                        .GetBytes(2131231312321231)
-                        .Concat(BitConverter.GetBytes(1323213123123132132))
-                        .ToArray()
-                        .Concat(BitConverter.GetBytes(12321312321312323))
-                        .ToArray()
-                ),
-                new DEAL( //DEAL с 256 битовым ключом
-                    BitConverter
-                        .GetBytes(2131231312321231)
-                        .Concat(BitConverter.GetBytes(1323213123123132132))
-                        .ToArray()
-                        .Concat(BitConverter.GetBytes(12321312321312323))
-                        .ToArray()
-                        .Concat(BitConverter.GetBytes(12321312312312331))
-                        .ToArray()
-                ),
-                new TripleDes(
+                new Rijndael( //DEAL с 128 битовым ключом
                     BitConverter
                         .GetBytes(2131231312321231)
                         .Concat(BitConverter.GetBytes(1323213123123132132))
                         .ToArray(),
-                    BitConverter
-                        .GetBytes(2131231999321231)
-                        .Concat(BitConverter.GetBytes(999123123132132))
-                        .ToArray(),
-                    BitConverter
-                        .GetBytes(213123131239881)
-                        .Concat(BitConverter.GetBytes(13232178823132132))
-                        .ToArray()
+                    modPoly: 463 //425, 433, 445, 451, 463, 471, 477, 487, 499, 501, 505 (неприводимые палиндромы)
                 ),
             };
 
@@ -326,8 +305,8 @@ namespace Program
             ); */
 
             //await CompareAsyncVsSync("/home/gaalex/MAI/5sem/Сryptography/Lab1/First/test.png");
-            //testEverything(null, "/home/gaalex/MAI/5sem/Сryptography/Lab1and3/First/test.png");
-            Ciphering ciphrator = new Ciphering(
+            testEverything(null, "/home/gaalex/MAI/5sem/Cryptography/Lab1and3/First/test.png");
+            /* Ciphering ciphrator = new Ciphering(
                 new Magenta(
                     BitConverter
                         .GetBytes(2131231312321231)
@@ -339,7 +318,7 @@ namespace Program
             );
 
             ciphrator.cipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1and3/First/test.mp4");
-            ciphrator.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1and3/First/testCip.mp4");
+            ciphrator.decipherFile("/home/gaalex/MAI/5sem/Сryptography/Lab1and3/First/testCip.mp4"); */
 
             /* byte[] test = new byte[16]
             {

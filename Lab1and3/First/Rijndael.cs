@@ -9,8 +9,14 @@ namespace AlgorithmLab3
         public byte RoundsAmount { get; private set; }
         public byte Nk { get; private set; }
         private readonly int Nb;
+        private readonly ushort modPoly;
+        private readonly byte[] sBox;
 
-        public RijndaelKeyGenerator(in byte[] key, RijndaelBlockLength blockLength)
+        public RijndaelKeyGenerator(
+            in byte[] key,
+            RijndaelBlockLength blockLength,
+            ushort modPoly = GaluaField.ModPoly
+        )
         {
             switch (key.Length)
             {
@@ -32,9 +38,16 @@ namespace AlgorithmLab3
                 }
             }
 
+            if (!GaluaField.IrreducibilityCheck(modPoly))
+            {
+                throw new ArgumentException("Модуль приводим над GF(2).", nameof(modPoly));
+            }
+
             Nb = ((int)blockLength) / 4;
             Nk = (byte)(key.Length / 4);
             RoundsAmount = (byte)(Math.Max(Nb, Nk) + 6);
+            this.modPoly = modPoly;
+            sBox = RijndaelSBox.GetSBox(modPoly);
         }
 
         public byte[][] getRoundKeys(in byte[] key)
@@ -79,7 +92,7 @@ namespace AlgorithmLab3
                     SubWord(temp);
                     temp[0] ^= rcon;
 
-                    rcon = GaluaField.Multiplication(rcon, 0x02);
+                    rcon = GaluaField.Multiplication(rcon, 0x02, modPoly);
                 }
                 else if (nkLocal > 6 && (iWord % nkLocal == 4))
                 {
@@ -115,11 +128,11 @@ namespace AlgorithmLab3
             word[3] = t;
         }
 
-        private static void SubWord(byte[] word)
+        private void SubWord(byte[] word)
         {
             for (int i = 0; i < 4; i++)
             {
-                word[i] = RijndaelSBox.SubByte(word[i]);
+                word[i] = sBox[word[i]];
             }
         }
     }
@@ -127,8 +140,15 @@ namespace AlgorithmLab3
     class RijndaelRoundTransmittion : IRoundTransmition
     {
         public byte RoundsAmount { get; private set; }
+        private readonly byte[] sBox;
+        private readonly byte[] invSBox;
+        private readonly ushort modPoly;
 
-        public RijndaelRoundTransmittion(in byte[] key, RijndaelBlockLength blockLength)
+        public RijndaelRoundTransmittion(
+            in byte[] key,
+            RijndaelBlockLength blockLength,
+            ushort modPoly = GaluaField.ModPoly
+        )
         {
             int nb = ((int)blockLength) / 4;
             int nk = key.Length / 4;
@@ -137,6 +157,9 @@ namespace AlgorithmLab3
                 throw new ArgumentException("Длина ключа должна быть 128, 192 или 256 бит!");
 
             RoundsAmount = (byte)(Math.Max(nb, nk) + 6);
+            this.modPoly = modPoly;
+            sBox = RijndaelSBox.GetSBox(modPoly);
+            invSBox = RijndaelSBox.GetInvSBox(modPoly);
         }
 
         public byte[] roundTransmition(in byte[] bytes, in byte[] roundKey)
@@ -146,7 +169,7 @@ namespace AlgorithmLab3
             // SubBytes
             for (int i = 0; i < bytes.Length; i++)
             {
-                result[i] = RijndaelSBox.SBox[bytes[i]];
+                result[i] = sBox[bytes[i]];
             }
 
             int Nb = bytes.Length / 4; // количество столбцов: 4, 6 или 8
@@ -155,7 +178,7 @@ namespace AlgorithmLab3
             GaluaField.ShiftRows(result, Nb);
 
             // MixColumns
-            GaluaField.MixColumns(result, Nb);
+            GaluaField.MixColumns(result, Nb, modPoly);
 
             // AddRoundKey
             for (int i = 0; i < bytes.Length; i++)
@@ -179,7 +202,7 @@ namespace AlgorithmLab3
             int Nb = bytes.Length / 4; // количество столбцов: 4, 6 или 8
 
             // MixColumns^-1
-            GaluaField.InvMixColumns(result, Nb);
+            GaluaField.InvMixColumns(result, Nb, modPoly);
 
             // ShiftRows^-1
             GaluaField.InvShiftRows(result, Nb);
@@ -187,7 +210,7 @@ namespace AlgorithmLab3
             // SubBytes^-1
             for (int i = 0; i < result.Length; i++)
             {
-                result[i] = RijndaelSBox.InvSBox[result[i]];
+                result[i] = invSBox[result[i]];
             }
 
             return result;
@@ -200,17 +223,22 @@ namespace AlgorithmLab3
         protected IRoundTransmition roundTransmition;
         private byte[][] roundKeys;
         public byte BlockSize { get; private set; }
+        protected byte[] sBox;
+        protected byte[] invSBox;
 
         public RijndaelWork(
             IGetRoundKeys getRoundKeys,
             IRoundTransmition roundTransmition,
             in byte[] key,
-            RijndaelBlockLength blockLength
+            RijndaelBlockLength blockLength,
+            ushort modPoly
         )
         {
             this.getRoundKeys = getRoundKeys;
             this.roundTransmition = roundTransmition;
             this.roundKeys = getRoundKeys.getRoundKeys(key);
+            sBox = RijndaelSBox.GetSBox(modPoly);
+            invSBox = RijndaelSBox.GetInvSBox(modPoly);
 
             switch (blockLength)
             {
@@ -251,7 +279,7 @@ namespace AlgorithmLab3
 
             // последний раунд (без MixColumns) + ключ K_Nr
             for (int i = 0; i < state.Length; i++)
-                state[i] = RijndaelSBox.SBox[state[i]];
+                state[i] = sBox[state[i]];
 
             int Nb = state.Length / 4;
             GaluaField.ShiftRows(state, Nb);
@@ -277,7 +305,7 @@ namespace AlgorithmLab3
             GaluaField.InvShiftRows(state, Nb);
 
             for (int i = 0; i < state.Length; i++)
-                state[i] = RijndaelSBox.InvSBox[state[i]];
+                state[i] = invSBox[state[i]];
 
             // раунды Nr-1 .. 1 (обратные полные раунды)
             for (int round = Nr - 1; round >= 1; round--)
@@ -302,13 +330,15 @@ namespace AlgorithmLab3
     {
         public Rijndael(
             in byte[] key,
-            RijndaelBlockLength blockLength = RijndaelBlockLength.B128Bit
+            RijndaelBlockLength blockLength = RijndaelBlockLength.B128Bit,
+            ushort modPoly = GaluaField.ModPoly
         )
             : base(
-                new RijndaelKeyGenerator(key, blockLength),
-                new RijndaelRoundTransmittion(key, blockLength),
+                new RijndaelKeyGenerator(key, blockLength, modPoly),
+                new RijndaelRoundTransmittion(key, blockLength, modPoly),
                 key,
-                blockLength
+                blockLength,
+                modPoly
             ) { }
     }
 }

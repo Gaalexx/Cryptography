@@ -27,10 +27,13 @@ namespace MyCiphering
 
     class MagentaRoundTransmition : IRoundTransmition
     {
+        private readonly byte[] sBox;
+
         public byte RoundsAmount { get; private set; }
 
-        public MagentaRoundTransmition(byte[] key)
+        public MagentaRoundTransmition(byte[] key, byte[] sBox)
         {
+            this.sBox = (byte[])sBox.Clone();
             switch (key.Length)
             {
                 case 16:
@@ -49,7 +52,7 @@ namespace MyCiphering
 
         private byte f(byte x)
         {
-            return MagentaArray.SBox[x];
+            return sBox[x];
         }
 
         private byte a(byte x, byte y)
@@ -219,8 +222,12 @@ namespace MyCiphering
 
     class Magenta : FeistelNetwork, ICipheringAlgorithm
     {
-        public Magenta(byte[] key)
-            : base(new MagentaGetRoundKeys(), new MagentaRoundTransmition(key), key) { }
+        public Magenta(byte[] key, ushort modPoly = MagentaArray.DefaultModPoly)
+            : base(
+                new MagentaGetRoundKeys(),
+                new MagentaRoundTransmition(key, MagentaArray.GetSBox(modPoly)),
+                key
+            ) { }
 
         public byte BlockSize { get; protected set; } = 16;
 
