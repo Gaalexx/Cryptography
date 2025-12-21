@@ -136,7 +136,7 @@ namespace Program
 
             /*  ICipheringAlgorithm[] cipheringAlgorithms = new ICipheringAlgorithm[1]
              {
-                 new Magenta( //DEAL с 128 битовым ключом
+                 new Magenta(
                      BitConverter
                          .GetBytes(2131231312321231)
                          .Concat(BitConverter.GetBytes(1323213123123132132))
@@ -147,12 +147,12 @@ namespace Program
             ICipheringAlgorithm[] cipheringAlgorithms = new ICipheringAlgorithm[1]
             {
                 /* new DES(BitConverter.GetBytes(213213213123123)), //DES */
-                new Rijndael( //DEAL с 128 битовым ключом
+                new DES( //DEAL с 128 битовым ключом
                     BitConverter
                         .GetBytes(2131231312321231)
                         .Concat(BitConverter.GetBytes(1323213123123132132))
-                        .ToArray(),
-                    modPoly: 463 //425, 433, 445, 451, 463, 471, 477, 487, 499, 501, 505 (неприводимые палиндромы)
+                        .ToArray() //,
+                // modPoly: 463 //425, 433, 445, 451, 463, 471, 477, 487, 499, 501, 505 (неприводимые палиндромы)
                 ),
             };
 

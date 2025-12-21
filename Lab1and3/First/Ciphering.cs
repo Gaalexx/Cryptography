@@ -11,6 +11,7 @@ namespace MyCiphering
         private ICipheringAlgorithm cipheringAlgorithm;
         private IPaddingMode paddingMode;
         private ICipheringMode cipheringMode;
+        private readonly CipheringMode cipheringModeKind;
         private byte[] initializeVector;
         private readonly int bufferLength;
 
@@ -22,6 +23,7 @@ namespace MyCiphering
         )
         {
             this.cipheringAlgorithm = cipheringAlgorithm;
+            this.cipheringModeKind = cipheringMode;
             bufferLength = cipheringAlgorithm.BlockSize * 512;
             if (initializeVector == null)
             {
@@ -160,6 +162,111 @@ namespace MyCiphering
             return newPath;
         }
 
+        private byte[] UpdateIVForNextChunk(
+            byte[] currentIV,
+            byte[] input,
+            byte[] output,
+            bool isCipher
+        )
+        {
+            int blockSize = cipheringAlgorithm.BlockSize;
+            int length = Math.Min(input.Length, output.Length);
+            int blocks = length / blockSize;
+            if (blocks == 0)
+            {
+                return currentIV;
+            }
+
+            switch (cipheringModeKind)
+            {
+                case CipheringMode.ECB:
+                    return currentIV;
+                case CipheringMode.CBC:
+                case CipheringMode.CFB:
+                    return CopyLastBlock(isCipher ? output : input, blockSize);
+                case CipheringMode.PCBC:
+                case CipheringMode.OFB:
+                    return XorLastBlock(input, output, blockSize);
+                case CipheringMode.CTR:
+                    byte[] nextCounter = (byte[])currentIV.Clone();
+                    IncrementCounterByBlocks(nextCounter, blocks);
+                    return nextCounter;
+                case CipheringMode.RandomDelta:
+                    byte[] delta = (byte[])currentIV.Clone();
+                    byte[] processedDelta = new byte[blockSize];
+                    int processedLength = blocks * blockSize;
+                    for (int i = 0; i < processedLength; i += blockSize)
+                    {
+                        for (int j = 0; j < blockSize; j++)
+                        {
+                            processedDelta[j] = (byte)(input[i + j] ^ output[i + j]);
+                        }
+                        AddLittleEndian(delta, processedDelta);
+                    }
+                    return delta;
+                default:
+                    return currentIV;
+            }
+        }
+
+        private static byte[] CopyLastBlock(byte[] data, int blockSize)
+        {
+            if (data.Length < blockSize)
+            {
+                return (byte[])data.Clone();
+            }
+            byte[] block = new byte[blockSize];
+            Array.Copy(data, data.Length - blockSize, block, 0, blockSize);
+            return block;
+        }
+
+        private static byte[] XorLastBlock(byte[] left, byte[] right, int blockSize)
+        {
+            int leftStart = Math.Max(0, left.Length - blockSize);
+            int rightStart = Math.Max(0, right.Length - blockSize);
+            int length = Math.Min(
+                blockSize,
+                Math.Min(left.Length - leftStart, right.Length - rightStart)
+            );
+            byte[] block = new byte[blockSize];
+            for (int i = 0; i < length; i++)
+            {
+                block[i] = (byte)(left[leftStart + i] ^ right[rightStart + i]);
+            }
+            return block;
+        }
+
+        private static void IncrementCounterByBlocks(byte[] counter, int blocks)
+        {
+            for (int i = 0; i < blocks; i++)
+            {
+                IncrementCounter(counter);
+            }
+        }
+
+        private static void IncrementCounter(byte[] counter)
+        {
+            for (int i = 0; i < counter.Length; i++)
+            {
+                counter[i]++;
+                if (counter[i] != 0)
+                {
+                    break;
+                }
+            }
+        }
+
+        private static void AddLittleEndian(byte[] target, byte[] addend)
+        {
+            int carry = 0;
+            for (int i = 0; i < target.Length; i++)
+            {
+                int sum = target[i] + addend[i] + carry;
+                target[i] = (byte)sum;
+                carry = sum >> 8;
+            }
+        }
+
         public bool cipherFile(String pathToFile)
         {
             String newPath;
@@ -174,6 +281,7 @@ namespace MyCiphering
                 byte[] buffer = new byte[bufferLength];
                 byte[] cipheredBlockSizeBuffer;
                 bool isFinalBlock = false;
+                byte[] currentIV = (byte[])this.initializeVector.Clone();
                 using (FileStream fsW = new FileStream(newPath, FileMode.OpenOrCreate))
                 using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
                 {
@@ -187,7 +295,7 @@ namespace MyCiphering
                             Array.Copy(buffer, finalBlock, bytesRead);
                             cipheredBlockSizeBuffer = cipheringMode.cipher(
                                 finalBlock,
-                                this.initializeVector,
+                                currentIV,
                                 isFinalBlock
                             );
                             fsW.Write(cipheredBlockSizeBuffer);
@@ -195,10 +303,16 @@ namespace MyCiphering
                         }
                         cipheredBlockSizeBuffer = cipheringMode.cipher(
                             buffer,
-                            this.initializeVector,
+                            currentIV,
                             isFinalBlock
                         );
                         fsW.Write(cipheredBlockSizeBuffer);
+                        currentIV = UpdateIVForNextChunk(
+                            currentIV,
+                            buffer,
+                            cipheredBlockSizeBuffer,
+                            true
+                        );
                     }
                 }
             }
@@ -219,6 +333,7 @@ namespace MyCiphering
                 byte[] buffer = new byte[bufferLength];
                 byte[] cipheredBlockSizeBuffer;
                 bool isFinalBlock = false;
+                byte[] currentIV = (byte[])this.initializeVector.Clone();
                 using (FileStream fsW = new FileStream(newPath, FileMode.OpenOrCreate))
                 using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
                 {
@@ -232,7 +347,7 @@ namespace MyCiphering
                             Array.Copy(buffer, finalBlock, bytesRead);
                             cipheredBlockSizeBuffer = cipheringMode.decipher(
                                 finalBlock,
-                                this.initializeVector,
+                                currentIV,
                                 isFinalBlock
                             );
                             fsW.Write(cipheredBlockSizeBuffer);
@@ -240,10 +355,16 @@ namespace MyCiphering
                         }
                         cipheredBlockSizeBuffer = cipheringMode.decipher(
                             buffer,
-                            this.initializeVector,
+                            currentIV,
                             isFinalBlock
                         );
                         fsW.Write(cipheredBlockSizeBuffer);
+                        currentIV = UpdateIVForNextChunk(
+                            currentIV,
+                            buffer,
+                            cipheredBlockSizeBuffer,
+                            false
+                        );
                     }
                 }
             }
@@ -262,6 +383,7 @@ namespace MyCiphering
                 byte[] buffer = new byte[bufferLength];
                 byte[] cipheredBlockSizeBuffer;
                 bool isFinalBlock = false;
+                byte[] currentIV = (byte[])this.initializeVector.Clone();
                 using (FileStream fsW = new FileStream(outputFile, FileMode.OpenOrCreate))
                 using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
                 {
@@ -275,7 +397,7 @@ namespace MyCiphering
                             Array.Copy(buffer, finalBlock, bytesRead);
                             cipheredBlockSizeBuffer = cipheringMode.cipher(
                                 finalBlock,
-                                this.initializeVector,
+                                currentIV,
                                 isFinalBlock
                             );
                             fsW.Write(cipheredBlockSizeBuffer);
@@ -283,10 +405,16 @@ namespace MyCiphering
                         }
                         cipheredBlockSizeBuffer = cipheringMode.cipher(
                             buffer,
-                            this.initializeVector,
+                            currentIV,
                             isFinalBlock
                         );
                         fsW.Write(cipheredBlockSizeBuffer);
+                        currentIV = UpdateIVForNextChunk(
+                            currentIV,
+                            buffer,
+                            cipheredBlockSizeBuffer,
+                            true
+                        );
                     }
                 }
             }
@@ -305,6 +433,7 @@ namespace MyCiphering
                 byte[] buffer = new byte[bufferLength];
                 byte[] cipheredBlockSizeBuffer;
                 bool isFinalBlock = false;
+                byte[] currentIV = (byte[])this.initializeVector.Clone();
                 using (FileStream fsW = new FileStream(outputFile, FileMode.OpenOrCreate))
                 using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
                 {
@@ -318,7 +447,7 @@ namespace MyCiphering
                             Array.Copy(buffer, finalBlock, bytesRead);
                             cipheredBlockSizeBuffer = cipheringMode.decipher(
                                 finalBlock,
-                                this.initializeVector,
+                                currentIV,
                                 isFinalBlock
                             );
                             fsW.Write(cipheredBlockSizeBuffer);
@@ -326,10 +455,16 @@ namespace MyCiphering
                         }
                         cipheredBlockSizeBuffer = cipheringMode.decipher(
                             buffer,
-                            this.initializeVector,
+                            currentIV,
                             isFinalBlock
                         );
                         fsW.Write(cipheredBlockSizeBuffer);
+                        currentIV = UpdateIVForNextChunk(
+                            currentIV,
+                            buffer,
+                            cipheredBlockSizeBuffer,
+                            false
+                        );
                     }
                 }
             }
@@ -346,6 +481,7 @@ namespace MyCiphering
 
             String newPath = makeChangedFilePath(pathToFile, "Cip");
             byte[] buffer = new byte[bufferLength];
+            byte[] currentIV = (byte[])this.initializeVector.Clone();
             using (FileStream fsW = new FileStream(newPath, FileMode.OpenOrCreate))
             using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
             {
@@ -356,10 +492,14 @@ namespace MyCiphering
                     byte[] dataBlock = bytesRead < buffer.Length ? buffer[..bytesRead] : buffer;
                     byte[] cipheredBlock = await cipheringMode.cipherAsync(
                         dataBlock,
-                        this.initializeVector,
+                        currentIV,
                         isFinalBlock
                     );
                     await fsW.WriteAsync(cipheredBlock, 0, cipheredBlock.Length);
+                    if (!isFinalBlock)
+                    {
+                        currentIV = UpdateIVForNextChunk(currentIV, dataBlock, cipheredBlock, true);
+                    }
                 }
             }
             return true;
@@ -375,6 +515,7 @@ namespace MyCiphering
 
             String newPath = makeChangedFilePath(pathToFile, "Decip");
             byte[] buffer = new byte[bufferLength];
+            byte[] currentIV = (byte[])this.initializeVector.Clone();
             using (FileStream fsW = new FileStream(newPath, FileMode.OpenOrCreate))
             using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
             {
@@ -385,10 +526,19 @@ namespace MyCiphering
                     byte[] dataBlock = bytesRead < buffer.Length ? buffer[..bytesRead] : buffer;
                     byte[] decipheredBlock = await cipheringMode.decipherAsync(
                         dataBlock,
-                        this.initializeVector,
+                        currentIV,
                         isFinalBlock
                     );
                     await fsW.WriteAsync(decipheredBlock, 0, decipheredBlock.Length);
+                    if (!isFinalBlock)
+                    {
+                        currentIV = UpdateIVForNextChunk(
+                            currentIV,
+                            dataBlock,
+                            decipheredBlock,
+                            false
+                        );
+                    }
                 }
             }
             return true;
@@ -403,6 +553,7 @@ namespace MyCiphering
             }
 
             byte[] buffer = new byte[bufferLength];
+            byte[] currentIV = (byte[])this.initializeVector.Clone();
             using (FileStream fsW = new FileStream(outputFile, FileMode.OpenOrCreate))
             using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
             {
@@ -413,10 +564,14 @@ namespace MyCiphering
                     byte[] dataBlock = bytesRead < buffer.Length ? buffer[..bytesRead] : buffer;
                     byte[] cipheredBlock = await cipheringMode.cipherAsync(
                         dataBlock,
-                        this.initializeVector,
+                        currentIV,
                         isFinalBlock
                     );
                     await fsW.WriteAsync(cipheredBlock, 0, cipheredBlock.Length);
+                    if (!isFinalBlock)
+                    {
+                        currentIV = UpdateIVForNextChunk(currentIV, dataBlock, cipheredBlock, true);
+                    }
                 }
             }
             return true;
@@ -431,6 +586,7 @@ namespace MyCiphering
             }
 
             byte[] buffer = new byte[bufferLength];
+            byte[] currentIV = (byte[])this.initializeVector.Clone();
             using (FileStream fsW = new FileStream(outputFile, FileMode.OpenOrCreate))
             using (FileStream fs = new FileStream(pathToFile, FileMode.Open))
             {
@@ -441,10 +597,19 @@ namespace MyCiphering
                     byte[] dataBlock = bytesRead < buffer.Length ? buffer[..bytesRead] : buffer;
                     byte[] decipheredBlock = await cipheringMode.decipherAsync(
                         dataBlock,
-                        this.initializeVector,
+                        currentIV,
                         isFinalBlock
                     );
                     await fsW.WriteAsync(decipheredBlock, 0, decipheredBlock.Length);
+                    if (!isFinalBlock)
+                    {
+                        currentIV = UpdateIVForNextChunk(
+                            currentIV,
+                            dataBlock,
+                            decipheredBlock,
+                            false
+                        );
+                    }
                 }
             }
             return true;
