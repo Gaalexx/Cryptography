@@ -11,14 +11,47 @@ namespace MyCiphering
                 throw new Exception("Ключ должен быть размером 128, 192 или 256 бит!");
             }
 
-            byte roundsAmount = (byte)(key.Length / 8);
-
-            byte[][] roundKeys = new byte[roundsAmount][];
-
-            for (int i = 0; i < roundsAmount; i++)
+            byte[][] subKeys = new byte[key.Length / 8][];
+            for (int i = 0; i < subKeys.Length; i++)
             {
-                roundKeys[i] = new byte[8];
-                Array.Copy(key, i * 8, roundKeys[i], 0, 8);
+                subKeys[i] = new byte[8];
+                Array.Copy(key, i * 8, subKeys[i], 0, 8);
+            }
+
+            byte[][] roundKeys;
+            switch (key.Length)
+            {
+                case 16:
+                    roundKeys = new byte[6][];
+                    roundKeys[0] = subKeys[0];
+                    roundKeys[1] = subKeys[0];
+                    roundKeys[2] = subKeys[1];
+                    roundKeys[3] = subKeys[1];
+                    roundKeys[4] = subKeys[0];
+                    roundKeys[5] = subKeys[0];
+                    break;
+                case 24:
+                    roundKeys = new byte[6][];
+                    roundKeys[0] = subKeys[0];
+                    roundKeys[1] = subKeys[1];
+                    roundKeys[2] = subKeys[2];
+                    roundKeys[3] = subKeys[2];
+                    roundKeys[4] = subKeys[1];
+                    roundKeys[5] = subKeys[0];
+                    break;
+                case 32:
+                    roundKeys = new byte[8][];
+                    roundKeys[0] = subKeys[0];
+                    roundKeys[1] = subKeys[1];
+                    roundKeys[2] = subKeys[2];
+                    roundKeys[3] = subKeys[3];
+                    roundKeys[4] = subKeys[3];
+                    roundKeys[5] = subKeys[2];
+                    roundKeys[6] = subKeys[1];
+                    roundKeys[7] = subKeys[0];
+                    break;
+                default:
+                    throw new Exception("Ключ должен быть размером 128, 192 или 256 бит!");
             }
 
             return roundKeys;
@@ -37,13 +70,13 @@ namespace MyCiphering
             switch (key.Length)
             {
                 case 16:
-                    RoundsAmount = 12;
+                    RoundsAmount = 6;
                     break;
                 case 24:
-                    RoundsAmount = 14;
+                    RoundsAmount = 6;
                     break;
                 case 32:
-                    RoundsAmount = 16;
+                    RoundsAmount = 8;
                     break;
                 default:
                     throw new Exception("Ключ должен быть размером 128, 192 или 256 бит!");

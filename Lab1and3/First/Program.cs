@@ -134,19 +134,20 @@ namespace Program
                 PaddingMode.ISO10126,
             };
 
-            /*  ICipheringAlgorithm[] cipheringAlgorithms = new ICipheringAlgorithm[1]
-             {
-                 new Magenta(
-                     BitConverter
-                         .GetBytes(2131231312321231)
-                         .Concat(BitConverter.GetBytes(1323213123123132132))
-                         .ToArray(), 463 //425, 433, 445, 451, 463, 471, 477, 487, 499, 501, 505 (неприводимые палиндромы)
-                 )
-             }; */
-
             ICipheringAlgorithm[] cipheringAlgorithms = new ICipheringAlgorithm[1]
             {
-                /* new DES(BitConverter.GetBytes(213213213123123)), //DES */
+                new Magenta(
+                    BitConverter
+                        .GetBytes(2131231312321231)
+                        .Concat(BitConverter.GetBytes(1323213123123132132))
+                        .ToArray(),
+                    463 //425, 433, 445, 451, 463, 471, 477, 487, 499, 501, 505 (неприводимые палиндромы)
+                ),
+            };
+
+            /* ICipheringAlgorithm[] cipheringAlgorithms = new ICipheringAlgorithm[1]
+            {
+                new DES(BitConverter.GetBytes(213213213123123)), //DES
                 new DES( //DEAL с 128 битовым ключом
                     BitConverter
                         .GetBytes(2131231312321231)
@@ -154,7 +155,7 @@ namespace Program
                         .ToArray() //,
                 // modPoly: 463 //425, 433, 445, 451, 463, 471, 477, 487, 499, 501, 505 (неприводимые палиндромы)
                 ),
-            };
+            }; */
 
             for (int i = 0; i < cipheringAlgorithms.Length; i++)
             {
